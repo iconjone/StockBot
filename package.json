@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "test",
-    "dev": "cross-env NODE_ENV=development index.js"
+    "dev": "cross-env NODE_ENV=development nodemon index.js"
   },
   "repository": {
     "type": "git",
@@ -18,10 +18,12 @@
   },
   "homepage": "https://github.com/iconjone/StockBot#readme",
   "dependencies": {
-    "@alpacahq/alpaca-trade-api": "^1.4.2",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "kraken-api": "^1.0.1",
+    "ws": "^7.4.1"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.6"
   }
 }
