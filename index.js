@@ -2,6 +2,7 @@
 require("dotenv").config();
 const KrakenRestClient = require("./KrakenRestClient");
 const KrakenWebSocketClient = require("./KrakenWebSocketClient");
+const helper = require("./helper");
 const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
 
@@ -12,17 +13,24 @@ krakenRest.api("Balance").then((balance) => {
   console.log(balance.result);
   //xbtBalance = balance.result.XXBT;
 });
-//krakenWebSocket.api("subscribe", "ohlc", ["ETH/USD"]);
+krakenWebSocket.api("subscribe", "ohlc", ["ETH/USD"]);
 krakenWebSocket.api("subscribe", "openOrders");
+//helper.sell(krakenWebSocket, "ETH/USD", 625, 0.03994201);
 //krakenWebSocket.api("subscribe", "ticker", ["LTC/USD", "ETH/USD"]);
-krakenWebSocket.api("addOrder", "addOrder", ["ETH/USD"], {
-  ordertype: "limit",
-  type: "buy",
-  price: 620,
-  volume: 0.02,
-  oflags: "fcib,post",
-  validate: "true",
-});
+// krakenWebSocket.api("addOrder", "addOrder", ["ETH/USD"], {
+//   ordertype: "limit",
+//   type: "buy",
+//   price: 627,
+//   volume: 0.02,
+//   oflags: "fcib,post",
+// });
+// krakenWebSocket.api("addOrder", "addOrder", ["ETH/USD"], {
+//   ordertype: "limit",
+//   type: "sell",
+//   price: 629,
+//   volume: 0.03993,
+//   oflags: "fciq,post",
+// });
 krakenWebSocket.ws.on("message", (data) => {
   data = JSON.parse(data);
   //console.log("WebSocket", data);
