@@ -52,27 +52,13 @@ class KrakenWebSocketClient {
     });
     this.wsAuth.on("message", (data) => {
       data = JSON.parse(data);
-      //console.log("WebSocket Auth", data);
+      if (data.event != "heartbeat")
+        console.log("WebSocket Auth", JSON.stringify(data));
     });
 
     this.ws.on("message", (data) => {
       data = JSON.parse(data);
       //console.log("WebSocket", data);
-
-      if (data[2])
-        if (data[2].includes("ohlc")) {
-          console.log(
-            data[1][5] - data[1][2],
-            data[1][5] - data[1][2] >= 0 ? "Climbing" : "Falling",
-            "|",
-            data[1][3] - data[1][4],
-            Math.abs(data[1][3] - data[1][4]) !=
-              Math.abs(data[1][5] - data[1][2])
-              ? "IMPORTANT"
-              : "",
-            data[3]
-          );
-        }
     });
   }
   api(eventPass, method, pair, params) {
@@ -99,7 +85,36 @@ class KrakenWebSocketClient {
       this.ws.send(JSON.stringify(payload));
     }
   }
+  async privateMethod(eventPass, method, pair, params) {
+    if (pair && typeof pair == "object") {
+      pair = pair[0];
+    }
 
+    let payload = {};
+    if (eventPass == "subscribe") {
+      payload.subscription = params || {};
+      payload.subscription.name = method;
+      payload.subscription.token = this.authToken;
+    } else {
+      payload = params || {};
+      payload.token = this.authToken;
+      if (pair) payload.pair = pair;
+      if (payload.price && typeof payload.price == "number")
+        payload.price = payload.price.toString();
+      if (payload.volume && typeof payload.volume == "number")
+        payload.volume = payload.volume.toString();
+    }
+    payload.event = eventPass;
+
+    if (this.wsAuth._readyState == 0) {
+      // if the WebSocket is not ready, run recursive
+      await new Promise((r) => setTimeout(r, 2000));
+      this.privateMethod(eventPass, method, pair, params);
+    } else {
+      console.log(payload);
+      this.wsAuth.send(JSON.stringify(payload));
+    }
+  }
   // ws.send(
   //   JSON.stringify({
   //     event: "subscribe",
