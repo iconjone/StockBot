@@ -1,5 +1,6 @@
 const WebSocket = require("ws");
 const KrakenRestClient = require("./KrakenRestClient");
+const chalk = require("chalk");
 
 // Public/Private method names
 const methods = {
@@ -30,7 +31,7 @@ class KrakenWebSocketClient {
     const krakenRest = new KrakenRestClient(key, secret);
     //    console.log(getToken(krakenRest));
     this.wsAuth.on("open", (open) => {
-      console.log("WebSocket Auth Opened");
+      console.log(chalk.green.underline("WebSocket Auth Opened"));
       this.wsAuth.send(JSON.stringify({ event: "ping" }));
       krakenRest.api("GetWebSocketsToken").then((token) => {
         this.authToken = token.result.token;
@@ -47,7 +48,7 @@ class KrakenWebSocketClient {
     });
 
     this.ws.on("open", (open) => {
-      console.log("WebSocket Opened");
+      console.log(chalk.green.underline("WebSocket Opened"));
       this.ws.send(JSON.stringify({ event: "ping" }));
     });
     this.wsAuth.on("message", (data) => {
@@ -111,7 +112,6 @@ class KrakenWebSocketClient {
       await new Promise((r) => setTimeout(r, 2000));
       this.privateMethod(eventPass, method, pair, params);
     } else {
-      console.log(payload);
       this.wsAuth.send(JSON.stringify(payload));
     }
   }

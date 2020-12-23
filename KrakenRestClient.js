@@ -1,5 +1,7 @@
 //Custom Kraken for REST API that just works... - Based off of https://github.com/nothingisdead/npm-kraken-api
 const got = require("got");
+const fetch = require("node-fetch");
+
 const crypto = require("crypto");
 const qs = require("qs");
 
@@ -65,32 +67,49 @@ const getMessageSignature = (path, request, secret, nonce) => {
 const rawRequest = async (url, headers, data, timeout) => {
   // Set custom User-Agent string
   headers["User-Agent"] = "Kraken Javascript API Client";
+  headers["Content-Type"] = "application/x-www-form-urlencoded"; //Important for some reason with the Kraken API UGH
 
-  const options = { headers, timeout };
-
-  Object.assign(options, {
-    method: "POST",
+  // const options = { headers, timeout };
+  const customOptions = {
+    headers,
+    timeout,
     body: qs.stringify(data),
-  });
+    method: "POST",
+  };
+  // Object.assign(options, {
+  //   method: "POST",
+  //   body: qs.stringify(data),
+  // });
 
-  const { body } = await got(url, options);
+  const response = await fetch(url, customOptions);
+  const body = await response.text();
+  return await JSON.parse(body);
+  // fetch(url, customOptions)
+  //   .then((res) => res.text())
+  //   .then(async (text) => {
+  //     data = JSON.parse(text);
+  //     console.log(data);
+  //     return await data;
+  //   });
 
-  const response = JSON.parse(body);
-  console.log(JSON.stringify(response), "Request Response");
+  // return "";
+  // console.log(options);
+  // const { body } = await got(url, options);
+  //
+  // const response = JSON.parse(body);
+  // console.log(JSON.stringify(response), "Request Response");
 
-  if (response.error && response.error.length) {
-    const error = response.error
-      .filter((e) => e.startsWith("E"))
-      .map((e) => e.substr(1));
-
-    if (!error.length) {
-      throw new Error("Kraken API returned an unknown error");
-    }
-
-    throw new Error(error.join(", "));
-  }
-
-  return response;
+  // if (response.error && response.error.length) {
+  //   const error = response.error
+  //     .filter((e) => e.startsWith("E"))
+  //     .map((e) => e.substr(1));
+  //
+  //   if (!error.length) {
+  //     throw new Error("Kraken API returned an unknown error");
+  //   }
+  //
+  //   throw new Error(error.join(", "));
+  // }
 };
 
 /**
@@ -203,6 +222,8 @@ class KrakenRestClient {
     };
 
     const response = rawRequest(url, headers, params, this.config.timeout);
+    //console.log(response, "this?");
+
     return response;
     // response
     //   .then((result) => {

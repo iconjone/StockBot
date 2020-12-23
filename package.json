@@ -18,8 +18,10 @@
   },
   "homepage": "https://github.com/iconjone/StockBot#readme",
   "dependencies": {
+    "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
     "kraken-api": "^1.0.1",
+    "node-fetch": "^2.6.1",
     "ws": "^7.4.1"
   },
   "devDependencies": {
