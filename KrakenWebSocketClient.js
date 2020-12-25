@@ -51,16 +51,11 @@ class KrakenWebSocketClient {
       console.log(chalk.green.underline("WebSocket Opened"));
       this.ws.send(JSON.stringify({ event: "ping" }));
     });
-    this.wsAuth.on("message", (data) => {
-      data = JSON.parse(data);
-      if (data.event != "heartbeat")
-        console.log("WebSocket Auth", JSON.stringify(data));
-    });
 
-    this.ws.on("message", (data) => {
-      data = JSON.parse(data);
-      //console.log("WebSocket", data);
-    });
+    // this.ws.on("message", (data) => {
+    //   data = JSON.parse(data);
+    //   //console.log("WebSocket", data);
+    // });
   }
   api(eventPass, method, pair, params) {
     if (methods.public.includes(method)) {
@@ -107,7 +102,7 @@ class KrakenWebSocketClient {
     }
     payload.event = eventPass;
 
-    if (this.wsAuth._readyState == 0) {
+    if (this.wsAuth._readyState == 0 || this.authToken == "Not Set Up") {
       // if the WebSocket is not ready, run recursive
       await new Promise((r) => setTimeout(r, 2000));
       this.privateMethod(eventPass, method, pair, params);
