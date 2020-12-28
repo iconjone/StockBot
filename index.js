@@ -250,7 +250,9 @@ function startTrading(overRideMode) {
                 previousBid < data[1].b[0] &&
                 watchingSlope[watchingSlope.length - 1] <= 0 &&
                 -0.45 < watchingSlope[watchingSlope.length - 1] &&
-                parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT &&
+                parseFloat(data[1].b[0]) <
+                  helper.getSellRateEqualizer(dropStart) -
+                    process.env.MIN_PROFIT &&
                 -0.5 < helper.getAverageEndOfArray(watchingSlope, 5) &&
                 watchingSlope.length > 20 &&
                 !bought
@@ -472,7 +474,10 @@ function startTrading(overRideMode) {
                       )
                     );
 
-                    if (newStart) {
+                    if (
+                      newStart &&
+                      newStart < watchingPrice[watchingPrice.length - 1]
+                    ) {
                       riseStart = (riseStart + newStart) / 2;
                       console.log(
                         "New Reccomended Minumum Buy Rate:",
@@ -537,10 +542,13 @@ function startTrading(overRideMode) {
                   if (
                     previousAsk > data[1].a[0] &&
                     watchingSlope[watchingSlope.length - 1] >= 0 &&
-                    0.45 > watchingSlope[watchingSlope.length - 1] &&
+                    0.75 > watchingSlope[watchingSlope.length - 1] &&
                     parseFloat(data[1].a[0]) <
-                      riseStart + process.env.MIN_PROFIT &&
-                    0.5 > helper.getAverageEndOfArray(watchingSlope, 5) &&
+                      helper.getBuyRateEqualizer(riseStart) +
+                        process.env.MIN_PROFIT &&
+                    1 > helper.getAverageEndOfArray(watchingSlope, 5) &&
+                    parseFloat(data[1].a[0]) >=
+                      helper.getSellRateEqualizer(priceBought) &&
                     watchingSlope.length > 20 &&
                     !sold
                   ) {
