@@ -87,7 +87,7 @@ class KrakenWebSocketClient {
     }
 
     let payload = {};
-    if (eventPass == "subscribe") {
+    if (eventPass == "subscribe" || eventPass == "unsubscribe") {
       payload.subscription = params || {};
       payload.subscription.name = method;
       payload.subscription.token = this.authToken;

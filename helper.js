@@ -1,3 +1,4 @@
+fee = 0.0016;
 function buy(krakenWebSocket, pair, price, volume) {
   krakenWebSocket.api("addOrder", "addOrder", [pair], {
     ordertype: "limit",
@@ -23,6 +24,7 @@ function sellingEstimatorsOHLC(prices, open, close, low, high) {
   close = close.map(Number);
   low = low.map(Number);
   high = high.map(Number);
+
   slope = high;
   priceSlope = [];
   slope.map((ele, index) => {
@@ -55,4 +57,44 @@ function sellingEstimatorsOHLC(prices, open, close, low, high) {
   console.log("-------------------");
 }
 
-module.exports = { buy, sell };
+function getSellRateEqualizer(input) {
+  return (input + input * fee) / (1 - fee);
+}
+
+function getBuyRateEqualizer(input) {
+  return (312 / 313) * input;
+}
+
+function getAverageHighSlopePrices(ohlc) {
+  highs = [];
+  ohlc.forEach((item, i) => {
+    if (item[5] && item[2] && parseFloat(item[5] - item[2]) > 0)
+      highs.push(parseFloat(item[3]));
+  });
+  return highs.reduce((a, b) => a + b, 0) / highs.length;
+}
+
+function getAverageLowSlopePrices(ohlc) {
+  lows = [];
+  ohlc.forEach((item, i) => {
+    if (item[5] && item[2] && parseFloat(item[5] - item[2]) < 0)
+      lows.push(parseFloat(item[4]));
+  });
+  return lows.reduce((a, b) => a + b, 0) / lows.length;
+}
+
+function getAverageEndOfArray(arr, length) {
+  arr = arr.slice(arr.length - length, arr.length);
+  sum = arr.reduce((a, b) => a + b, 0);
+  return sum / length;
+}
+
+module.exports = {
+  buy,
+  sell,
+  getSellRateEqualizer,
+  getBuyRateEqualizer,
+  getAverageHighSlopePrices,
+  getAverageLowSlopePrices,
+  getAverageEndOfArray,
+};

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "test",
-    "dev": "cross-env NODE_ENV=development nodemon index.js"
+    "dev": "cross-env NODE_ENV=development nodemon index.js",
+    "train": "nodemon trainModel.js"
   },
   "repository": {
     "type": "git",
@@ -18,11 +19,15 @@
   },
   "homepage": "https://github.com/iconjone/StockBot#readme",
   "dependencies": {
+    "@tensorflow/tfjs": "^2.7.0",
+    "@tensorflow/tfjs-node": "^2.7.0",
+    "@tensorflow/tfjs-node-gpu": "^2.7.0",
     "asciichart": "^1.5.25",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
     "kraken-api": "^1.0.1",
     "node-fetch": "^2.6.1",
+    "plotly": "^1.0.6",
     "ws": "^7.4.1"
   },
   "devDependencies": {
