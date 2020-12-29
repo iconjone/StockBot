@@ -169,6 +169,8 @@ function startTrading(overRideMode) {
 
         previousBid = 0;
 
+        orderID = null;
+
         krakenWebSocket.ws.on("message", (data) => {
           data = JSON.parse(data);
           if (data[2]) {
@@ -290,6 +292,25 @@ function startTrading(overRideMode) {
                 chalk.green(data[1].b[0])
               );
               previousBid = data[1].b[0];
+              if (orderID) {
+                console.log(orderID);
+                setTimeout(() => {
+                  krakenRest
+                    .api("QueryOrders", { txid: orderID })
+                    .then((data) => {
+                      console.log(data);
+                      if (data)
+                        if (data.result[orderID].status == "open") {
+                          krakenRest
+                            .api("CancelOrder", { txid: orderID })
+                            .then((data) => {
+                              console.log("Canceled Order", data);
+                              orderID = null;
+                            });
+                        }
+                    });
+                }, 15000);
+              }
             }
           }
         });
@@ -300,6 +321,17 @@ function startTrading(overRideMode) {
             if (data[1] == "openOrders") {
               if (bought) {
                 console.log("Order Placed");
+                if (data[0][0]) {
+                  id = Object.entries(data[0][0])[0];
+                  if (data[0][0][id]) {
+                    orderID = id;
+                    if (data[0][0][id].status == "canceled") {
+                      bought = false;
+                      trade.pop();
+                    }
+                  }
+                }
+                //Check if the order was fulfilled in 15 seconds, if not, cancel and try again
               }
             } else if (data[1] == "ownTrades") {
               if (bought) {
@@ -310,6 +342,7 @@ function startTrading(overRideMode) {
                 krakenWebSocket.api("unsubscribe", "ticker", [
                   `${tradingSymbol}/USD`,
                 ]); //Subscribe to ticker
+                orderID = null;
                 delete krakenRest;
                 delete krakenWebSocket;
                 return startTrading();
@@ -350,7 +383,9 @@ function startTrading(overRideMode) {
           chalk.bold.bgGreen(
             `Bought at: ${priceBought} | Wanted Price: ${wantedPrice} | Estimated Jump $${
               wantedPrice - priceBought
-            } | Estimated Profit ${volume * (wantedPrice - priceBought)}`
+            } | Estimated Profit ${
+              sellableVolume * (wantedPrice - priceBought)
+            } - Volume: ${sellableVolume}${tradingSymbol}`
           )
         );
         krakenRest
@@ -454,6 +489,7 @@ function startTrading(overRideMode) {
 
             previousAsk = 0;
             sold = false;
+            orderID = null;
 
             krakenWebSocket.ws.on("message", (data) => {
               data = JSON.parse(data);
@@ -473,8 +509,13 @@ function startTrading(overRideMode) {
                         )
                       )
                     );
-
-                    if (
+                    if (newStart < wantedPrice) {
+                      riseStart = wantedPrice;
+                      console.log(
+                        "New Reccomended Minumum Buy Rate:",
+                        chalk.bgMagenta(riseStart)
+                      );
+                    } else if (
                       newStart &&
                       newStart < watchingPrice[watchingPrice.length - 1]
                     ) {
@@ -539,16 +580,15 @@ function startTrading(overRideMode) {
                   // if (wantedPrice < riseStart) { //either do this in the averaging of the rise start or something else to keep it done we'll see
                   //   riseStart = (wantedPrice + riseStart) / 2;
                   // }
+                  //readjust parts
                   if (
-                    previousAsk > data[1].a[0] &&
+                    previousAsk >= data[1].a[0] &&
                     watchingSlope[watchingSlope.length - 1] >= 0 &&
                     0.75 > watchingSlope[watchingSlope.length - 1] &&
-                    parseFloat(data[1].a[0]) <
-                      helper.getBuyRateEqualizer(riseStart) +
-                        process.env.MIN_PROFIT &&
-                    1 > helper.getAverageEndOfArray(watchingSlope, 5) &&
+                    1.3 > helper.getAverageEndOfArray(watchingSlope, 5) &&
                     parseFloat(data[1].a[0]) >=
-                      helper.getSellRateEqualizer(priceBought) &&
+                      parseFloat(wantedPrice) +
+                        parseFloat(process.env.MIN_PROFIT) &&
                     watchingSlope.length > 20 &&
                     !sold
                   ) {
@@ -567,16 +607,17 @@ function startTrading(overRideMode) {
                       type: "sell",
                       bought_at: soldValue,
                       equalize_at: helper.getBuyRateEqualizer(
-                        parseFloat(boughtValue)
+                        parseFloat(soldValue)
                       ),
                     });
-                    if (process.env.LIVE)
+                    if (process.env.LIVE) {
                       helper.sell(
                         krakenWebSocket,
                         `${tradingSymbol}/USD`,
                         soldValue,
-                        volume
+                        sellableVolume
                       );
+                    }
                   }
                   console.log(
                     "Best Ask",
@@ -584,7 +625,25 @@ function startTrading(overRideMode) {
                     "Best Bid",
                     chalk.green(data[1].b[0])
                   );
-                  previousAsk = data[1].b[0];
+                  previousAsk = data[1].a[0];
+                  if (orderID) {
+                    console.log(orderID);
+                    setTimeout(() => {
+                      krakenRest
+                        .api("QueryOrders", { txid: orderID })
+                        .then((data) => {
+                          console.log(data);
+                          if (data.result[orderID].status == "open") {
+                            krakenRest
+                              .api("CancelOrder", { txid: orderID })
+                              .then((data) => {
+                                console.log("Canceled Order", data);
+                                orderID = null;
+                              });
+                          }
+                        });
+                    }, 15000);
+                  }
                 }
               }
             });
@@ -595,6 +654,16 @@ function startTrading(overRideMode) {
                 if (data[1] == "openOrders") {
                   if (sold) {
                     console.log("Order Placed");
+                    if (data[0][0]) {
+                      id = Object.entries(data[0][0])[0];
+                      if (data[0][0][id]) {
+                        orderID = id;
+                        if (data[0][0][id].status == "canceled") {
+                          sold = false;
+                          trade.POP;
+                        }
+                      }
+                    }
                   }
                 } else if (data[1] == "ownTrades") {
                   if (sold) {
