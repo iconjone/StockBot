@@ -1,5 +1,5 @@
 //Custom Kraken for REST API that just works... - Based off of https://github.com/nothingisdead/npm-kraken-api
-const got = require("got");
+//const got = require("got");
 const fetch = require("node-fetch");
 
 const crypto = require("crypto");
