@@ -6,9 +6,11 @@ const asciichart = require("asciichart");
 //const asciichartConfig = { colors: [asciichart.red, asciichart.green] };
 const KrakenRestClient = require("./KrakenRestClient");
 const KrakenWebSocketClient = require("./KrakenWebSocketClient");
+const GroupMeBot = require("./GroupMeBot");
 const helper = require("./helper");
 const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
+const botID = process.env.BOT_ID; // GroupMeBot ID
 
 mode = undefined; // If mode is true, we are in buy mode, else if it is in false we are in sell mode
 
@@ -20,6 +22,9 @@ let trade = [];
 
 pricesList = [];
 slopeList = [];
+
+bot = new GroupMeBot(botID);
+bot.send("Stock Bot Restarting");
 
 //Algo 1 Idea
 //Get money balance(startTrading)
@@ -99,7 +104,7 @@ function startTrading(overRideMode) {
               highs.push(parseFloat(item[2]));
           }
         });
-        if (process.env.LIVE) {
+        if (process.env.NODE_ENV == "development") {
           console.log(
             asciichart.plot(pricesList, {
               colors: [asciichart.cyan],
@@ -250,6 +255,7 @@ function startTrading(overRideMode) {
                   console.log(
                     chalk.bgGreen("Dropping and Waiting for Buy Signal..")
                   );
+                  bot.send("WAITING FOR BUY SIGNAL");
                 } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
                   console.log(chalk.bgGreen("Going down :)"));
                 } else {
@@ -294,6 +300,12 @@ function startTrading(overRideMode) {
                         helper.getSellRateEqualizer(parseFloat(boughtValue))
                     )
                 );
+                bot.send(
+                  "BUY AT $" +
+                    boughtValue +
+                    " Equalizer: $" +
+                    helper.getSellRateEqualizer(parseFloat(boughtValue))
+                );
                 trade.push({
                   type: "buy",
                   bought_at: parseFloat(data[1].b[0]) + 0.01,
@@ -330,6 +342,7 @@ function startTrading(overRideMode) {
                             .api("CancelOrder", { txid: orderID })
                             .then((data) => {
                               console.log("Canceled Order", data);
+                              bot.send("ORDER Timeout - Canceled");
                               orderID = null;
                             });
                         }
@@ -351,6 +364,7 @@ function startTrading(overRideMode) {
                   if (data[0][0][id]) {
                     orderID = id;
                     if (data[0][0][id].status == "canceled") {
+                      bot.send("ORDER Failed - Canceled");
                       bought = false;
                       trade.pop();
                     }
@@ -367,6 +381,7 @@ function startTrading(overRideMode) {
                 krakenWebSocket.api("unsubscribe", "ticker", [
                   `${tradingSymbol}/USD`,
                 ]); //Subscribe to ticker
+                bot.send("ORDER confirmed");
                 orderID = null;
                 delete krakenRest;
                 delete krakenWebSocket;
@@ -413,6 +428,7 @@ function startTrading(overRideMode) {
             } - Volume: ${sellableVolume}${tradingSymbol}`
           )
         );
+
         //get the last trade and if it's been a while and the price is nowhere near it calculate a new wantedPrice to have it make it's money back
         krakenRest
           .api("OHLC", { pair: `${tradingSymbol}/USD` })
@@ -439,7 +455,7 @@ function startTrading(overRideMode) {
               }
             });
 
-            if (process.env.LIVE) {
+            if (process.env.NODE_ENV == "development") {
               console.log(
                 asciichart.plot(pricesList, {
                   colors: [asciichart.cyan],
@@ -502,7 +518,15 @@ function startTrading(overRideMode) {
                 )
               )
             );
-
+            bot.send(
+              `Bought at: ${priceBought} | Wanted Price: ${wantedPrice} | Estimated Jump $${
+                wantedPrice - priceBought
+              } | Estimated Profit ${
+                sellableVolume * (wantedPrice - priceBought)
+              } - Volume: ${sellableVolume}${tradingSymbol} - Current Price: ${
+                pricesList[pricesList.length - 1]
+              }`
+            );
             riseStart = helper.getSellRateEqualizer(
               lows.reduce((a, b) => a + b, 0) / lows.length
             );
@@ -607,6 +631,7 @@ function startTrading(overRideMode) {
                       watchingSlope[watchingSlope.length - 1] >= 0 &&
                       data[1][6] >= riseStart + process.env.MIN_PROFIT
                     ) {
+                      if (!sold) bot.send("WAITING FOR SELL SIGNAL");
                       console.log(
                         chalk.bgRed("Raising and Waiting for Sell Signal..")
                       );
@@ -657,6 +682,12 @@ function startTrading(overRideMode) {
                             helper.getBuyRateEqualizer(parseFloat(soldValue))
                         )
                     );
+                    bot.send(
+                      "SOLD AT $" +
+                        soldValue +
+                        " Equalizer: $" +
+                        helper.getBuyRateEqualizer(parseFloat(soldValue))
+                    );
                     trade.push({
                       type: "sell",
                       bought_at: soldValue,
@@ -693,6 +724,7 @@ function startTrading(overRideMode) {
                               .api("CancelOrder", { txid: orderID })
                               .then((data) => {
                                 console.log("Canceled Order", data);
+                                bot.send("ORDER Timeout - Canceled");
                                 orderID = null;
                               });
                           }
@@ -714,6 +746,7 @@ function startTrading(overRideMode) {
                       if (data[0][0][id]) {
                         orderID = id;
                         if (data[0][0][id].status == "canceled") {
+                          bot.send("ORDER Failed - Canceled");
                           sold = false;
                           trade.POP;
                         }
@@ -723,6 +756,7 @@ function startTrading(overRideMode) {
                 } else if (data[1] == "ownTrades") {
                   if (sold) {
                     console.log("Order confirmed..", JSON.stringify(data[0]));
+                    bot.send("ORDER Confirmed");
                     krakenWebSocket.api("unsubscribe", "ohlc", [
                       `${tradingSymbol}/USD`,
                     ]); //Subscribe to ohlc

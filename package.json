@@ -23,6 +23,7 @@
     "asciichart": "^1.5.25",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
+    "http": "0.0.1-security",
     "kraken-api": "^1.0.1",
     "node-fetch": "^2.6.1",
     "plotly": "^1.0.6",
