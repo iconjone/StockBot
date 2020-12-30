@@ -12,21 +12,24 @@ const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
 const botID = process.env.BOT_ID; // GroupMeBot ID
 
+bot = new GroupMeBot(botID);
+bot.send("Stock Bot Restarting");
+
 const pm2 = require("pm2");
 restart = true;
-
-setTimeout(() => {
-  pm2.connect(() => {
-    setInterval(function shouldRestart() {
-      console.log(restart);
-      if (restart) {
-        pm2.restart("index");
-      } else {
-        restart = true;
-      }
-    }, 60000);
-  });
-}, 15000);
+if (process.env.NODE_ENV != "development")
+  setTimeout(() => {
+    pm2.connect(() => {
+      setInterval(function shouldRestart() {
+        if (restart) {
+          bot.send("Restarting due to hanged process");
+          pm2.restart("index");
+        } else {
+          restart = true;
+        }
+      }, 60000);
+    });
+  }, 15000);
 
 mode = undefined; // If mode is true, we are in buy mode, else if it is in false we are in sell mode
 
@@ -36,9 +39,6 @@ let trade = [];
 
 pricesList = [];
 slopeList = [];
-
-bot = new GroupMeBot(botID);
-bot.send("Stock Bot Restarting");
 
 //Algo 1 Idea
 //Get money balance(startTrading)
@@ -91,6 +91,7 @@ function startTrading(overRideMode) {
     if (mode) {
       bought = false;
       console.log(chalk.bold.underline.bgCyan("Buying Mode"));
+
       //Figure out best market to trade in - We prechose ETH
       krakenWebSocket.api("subscribe", "ohlc", [`${tradingSymbol}/USD`]); //Subscribe to ohlc
       krakenWebSocket.api("subscribe", "ticker", [`${tradingSymbol}/USD`]); //Subscribe to ticker
@@ -175,14 +176,39 @@ function startTrading(overRideMode) {
           console.log(
             "Reccomended Maximum Buy Rate:",
             chalk.bgMagenta(
-              helper.getBuyRateEqualizer(
+              (helper.getBuyRateEqualizer(
                 highs.reduce((a, b) => a + b, 0) / highs.length
-              )
+              ) +
+                helper.getBuyRateEqualizer(
+                  lows.reduce((a, b) => a + b, 0) / lows.length
+                )) /
+                2
             )
           );
         }
-        dropStart = helper.getBuyRateEqualizer(
-          highs.reduce((a, b) => a + b, 0) / highs.length
+
+        dropStart =
+          (helper.getBuyRateEqualizer(
+            highs.reduce((a, b) => a + b, 0) / highs.length
+          ) +
+            helper.getBuyRateEqualizer(
+              lows.reduce((a, b) => a + b, 0) / lows.length
+            )) /
+          2;
+        bot.send(
+          `Buying Mode - Low Target: $${
+            lows
+              .sort()
+              .slice(0, 5)
+              .reduce((a, b) => a + b, 0) / 5
+          } High Target: $${
+            highs
+              .sort()
+              .slice(highs.length - 5, highs.length)
+              .reduce((a, b) => a + b, 0) / 5
+          } - Reccomended Maximum Buy Rate: $${helper.getBuyRateEqualizer(
+            highs.reduce((a, b) => a + b, 0) / highs.length
+          )}`
         );
         //Start reading the Wewsocket connections
 
@@ -204,7 +230,7 @@ function startTrading(overRideMode) {
               watchingPrice.push(parseFloat(data[1][6]));
 
               if (watchingSlope.length % 45 == 0) {
-                newDrop = helper.getBuyRateEqualizer(
+                newDropHigh = helper.getBuyRateEqualizer(
                   helper.getAverageHighSlopePrices(
                     ohlcStore.slice(
                       ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
@@ -212,9 +238,16 @@ function startTrading(overRideMode) {
                     )
                   ) //I feel like this should be average Low slope prices - Maybe change it back we'll see - We did this because we are looking at the average high and then going from there
                 );
-
-                if (newDrop) {
-                  dropStart = (dropStart + newDrop) / 2;
+                newDropLow = helper.getBuyRateEqualizer(
+                  helper.getAverageLowSlopePrices(
+                    ohlcStore.slice(
+                      ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                      ohlcStore.length
+                    )
+                  )
+                );
+                if (newDropHigh && newDropLow) {
+                  dropStart = (dropStart + newDropHigh + newDropLow) / 3;
                   if (process.env.NODE_ENV == "development")
                     console.log(
                       "New Reccomended Maximum Buy Rate:",
@@ -286,10 +319,9 @@ function startTrading(overRideMode) {
                   previousBid < data[1].b[0],
                   watchingSlope[watchingSlope.length - 1] <= 0,
                   -0.07 < watchingSlope[watchingSlope.length - 1],
-                  parseFloat(data[1].b[0]) <
-                    helper.getSellRateEqualizer(dropStart) -
-                      process.env.MIN_PROFIT,
+                  parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT,
                   -0.1 < helper.getAverageEndOfArray(watchingSlope, 5),
+                  -0.75 < helper.getAverageEndOfArray(watchingSlope, 50),
                   watchingSlope.length > 20,
                   !bought,
                   "Need to be all true"
@@ -297,11 +329,10 @@ function startTrading(overRideMode) {
               if (
                 previousBid < data[1].b[0] &&
                 watchingSlope[watchingSlope.length - 1] <= 0 &&
-                -0.15 < watchingSlope[watchingSlope.length - 1] &&
-                parseFloat(data[1].b[0]) <
-                  helper.getSellRateEqualizer(dropStart) -
-                    process.env.MIN_PROFIT &&
-                -0.3 < helper.getAverageEndOfArray(watchingSlope, 5) &&
+                -0.07 < watchingSlope[watchingSlope.length - 1] &&
+                parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT &&
+                -0.1 < helper.getAverageEndOfArray(watchingSlope, 5) &&
+                -0.75 < helper.getAverageEndOfArray(watchingSlope, 50) &&
                 watchingSlope.length > 20 &&
                 !bought
               ) {
@@ -352,7 +383,7 @@ function startTrading(overRideMode) {
                     .api("QueryOrders", { txid: orderID })
                     .then((data) => {
                       console.log(data);
-                      if (data)
+                      if (data && bought)
                         if (data.result[orderID].status == "open") {
                           krakenRest
                             .api("CancelOrder", { txid: orderID })
@@ -376,7 +407,7 @@ function startTrading(overRideMode) {
               if (bought) {
                 console.log("Order Placed");
                 if (data[0][0]) {
-                  id = Object.entries(data[0][0])[0];
+                  id = Object.entries(data[0][0])[0][0];
                   if (data[0][0][id]) {
                     orderID = id;
                     if (data[0][0][id].status == "canceled") {
@@ -437,7 +468,7 @@ function startTrading(overRideMode) {
         });
         console.log(
           chalk.bold.bgGreen(
-            `Bought at: ${priceBought} | Wanted Price: ${wantedPrice} | Estimated Jump $${
+            `Selling Mode - Bought at: ${priceBought} | Wanted Price: ${wantedPrice} | Estimated Jump $${
               wantedPrice - priceBought
             } | Estimated Profit ${
               sellableVolume * (wantedPrice - priceBought)
@@ -529,22 +560,33 @@ function startTrading(overRideMode) {
             console.log(
               "Reccomended Minumum Sell Rate:",
               chalk.bgMagenta(
-                helper.getSellRateEqualizer(
-                  lows.reduce((a, b) => a + b, 0) / lows.length
-                )
+                (helper.getSellRateEqualizer(
+                  highs.reduce((a, b) => a + b, 0) / highs.length
+                ) +
+                  helper.getSellRateEqualizer(
+                    lows.reduce((a, b) => a + b, 0) / lows.length
+                  )) /
+                  2
               )
             );
+
+            riseStart =
+              (helper.getSellRateEqualizer(
+                highs.reduce((a, b) => a + b, 0) / highs.length
+              ) +
+                helper.getSellRateEqualizer(
+                  lows.reduce((a, b) => a + b, 0) / lows.length
+                )) /
+              2;
+
             bot.send(
-              `Bought at: ${priceBought} | Wanted Price: ${wantedPrice} | Estimated Jump $${
-                wantedPrice - priceBought
+              `Bought at: ${priceBought} | Breakeven Price: ${wantedPrice} | Estimated Sell Price: $${riseStart} | Estimated Jump $${
+                riseStart - priceBought
               } | Estimated Profit ${
-                sellableVolume * (wantedPrice - priceBought)
+                sellableVolume * (riseStart - priceBought)
               } - Volume: ${sellableVolume}${tradingSymbol} - Current Price: ${
                 pricesList[pricesList.length - 1]
               }`
-            );
-            riseStart = helper.getSellRateEqualizer(
-              lows.reduce((a, b) => a + b, 0) / lows.length
             );
 
             //Start reading the Wewsocket connections
@@ -567,7 +609,8 @@ function startTrading(overRideMode) {
                   watchingPrice.push(parseFloat(data[1][6]));
 
                   if (watchingSlope.length % 45 == 0) {
-                    newStart = helper.getSellRateEqualizer(
+                    newStart = 0;
+                    newStartLow = helper.getSellRateEqualizer(
                       helper.getAverageLowSlopePrices(
                         ohlcStore.slice(
                           ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
@@ -575,18 +618,28 @@ function startTrading(overRideMode) {
                         )
                       )
                     );
-                    if (newStart < wantedPrice) {
+                    newStartHigh = helper.getSellRateEqualizer(
+                      helper.getAverageHighSlopePrices(
+                        ohlcStore.slice(
+                          ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                          ohlcStore.length
+                        )
+                      )
+                    );
+                    newStart = (riseStart + newStartLow + newStartHigh) / 3;
+
+                    if (newStart && newStart < wantedPrice) {
                       riseStart = wantedPrice;
                       if (process.env.NODE_ENV == "development")
                         console.log(
-                          "New Reccomended Minumum Buy Rate:",
+                          "Default Minumum Buy Rate:",
                           chalk.bgMagenta(riseStart)
                         );
                     } else if (
                       newStart &&
                       newStart < watchingPrice[watchingPrice.length - 1]
                     ) {
-                      riseStart = (riseStart + newStart) / 2;
+                      riseStart = newStart;
                       if (process.env.NODE_ENV == "development")
                         console.log(
                           "New Reccomended Minumum Buy Rate:",
@@ -739,15 +792,16 @@ function startTrading(overRideMode) {
                         .api("QueryOrders", { txid: orderID })
                         .then((data) => {
                           console.log(data);
-                          if (data.result[orderID].status == "open") {
-                            krakenRest
-                              .api("CancelOrder", { txid: orderID })
-                              .then((data) => {
-                                console.log("Canceled Order", data);
-                                bot.send("ORDER Timeout - Canceled");
-                                orderID = null;
-                              });
-                          }
+                          if (data && sold)
+                            if (data.result[orderID].status == "open") {
+                              krakenRest
+                                .api("CancelOrder", { txid: orderID })
+                                .then((data) => {
+                                  console.log("Canceled Order", data);
+                                  bot.send("ORDER Timeout - Canceled");
+                                  orderID = null;
+                                });
+                            }
                         });
                     }, 15000);
                   }
@@ -762,7 +816,7 @@ function startTrading(overRideMode) {
                   if (sold) {
                     console.log("Order Placed");
                     if (data[0][0]) {
-                      id = Object.entries(data[0][0])[0];
+                      id = Object.entries(data[0][0])[0][0];
                       if (data[0][0][id]) {
                         orderID = id;
                         if (data[0][0][id].status == "canceled") {
