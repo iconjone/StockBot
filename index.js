@@ -255,7 +255,7 @@ function startTrading(overRideMode) {
                   console.log(
                     chalk.bgGreen("Dropping and Waiting for Buy Signal..")
                   );
-                  bot.send("WAITING FOR BUY SIGNAL");
+                  bot.send("WAITING FOR BUY SIGNAL: $" + data[1][6]);
                 } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
                   console.log(chalk.bgGreen("Going down :)"));
                 } else {
@@ -631,7 +631,8 @@ function startTrading(overRideMode) {
                       watchingSlope[watchingSlope.length - 1] >= 0 &&
                       data[1][6] >= riseStart + process.env.MIN_PROFIT
                     ) {
-                      if (!sold) bot.send("WAITING FOR SELL SIGNAL");
+                      if (!sold)
+                        bot.send("WAITING FOR SELL SIGNAL: $" + data[1][6]);
                       console.log(
                         chalk.bgRed("Raising and Waiting for Sell Signal..")
                       );
