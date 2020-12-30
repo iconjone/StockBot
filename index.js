@@ -18,6 +18,9 @@ max_allocation = 15;
 
 let trade = [];
 
+pricesList = [];
+slopeList = [];
+
 //Algo 1 Idea
 //Get money balance(startTrading)
 //  if there is money somehwere besides ZUSD,Hard Set as ETH for now
@@ -39,6 +42,9 @@ function startTrading(overRideMode) {
   sellableVolume = 0;
   krakenRest.api("Balance").then((data) => {
     let balance = data.result;
+    if (balance == undefined) {
+      return startTrading();
+    }
     let balanceArr = Object.entries(balance);
     console.log(chalk.bgCyan.underline.bold("Starting Balance: "));
     balanceArr.forEach((item, i) => {
@@ -73,7 +79,7 @@ function startTrading(overRideMode) {
       krakenRest.api("OHLC", { pair: `${tradingSymbol}/USD` }).then((data) => {
         data = data.result[`${tradingSymbol}/USD`];
         if (data == undefined) return startTrading();
-        data = data.slice(data.length - 45, data.length - 1); //Get data from the last 45 minutes
+        data = data.slice(data.length - 180, data.length - 1); //Get data from the last 45 minutes
 
         pricesList = [];
         slopeList = [];
@@ -93,7 +99,7 @@ function startTrading(overRideMode) {
               highs.push(parseFloat(item[2]));
           }
         });
-        if (true) {
+        if (process.env.LIVE) {
           console.log(
             asciichart.plot(pricesList, {
               colors: [asciichart.cyan],
@@ -146,9 +152,7 @@ function startTrading(overRideMode) {
                 .reduce((a, b) => a + b, 0) / 5
             )
           );
-          //  console.log(lows, highs);
-          // console.log(JSON.stringify(slopeList));
-          // console.log(JSON.stringify(pricesList));
+
           console.log(
             "Reccomended Maximum Buy Rate:",
             chalk.bgMagenta(
@@ -176,7 +180,7 @@ function startTrading(overRideMode) {
           if (data[2]) {
             if (data[2].includes("ohlc")) {
               if (data[1][5] != 0) ohlcStore.push(data[1]);
-              //console.log(watchingSlope);
+
               watchingSlope.push(parseFloat(data[1][5] - data[1][2]));
               watchingPrice.push(parseFloat(data[1][6]));
 
@@ -198,64 +202,84 @@ function startTrading(overRideMode) {
                   );
                 }
               }
+              if (watchingSlope.length > 750) {
+                watchingSlope = watchingSlope.slice(500, watchingSlope.length);
+                watchingPrice = watchingPrice.slice(500, watchingPrice.length);
+              }
 
-              console.log(
-                "Slope:",
-                chalk.bgYellow(data[1][5] - data[1][2]),
-                "% Change:",
-                chalk.bgYellow(
-                  ((parseFloat(data[1][5]) - parseFloat(data[1][2])) /
-                    ((parseFloat(data[1][5]) + parseFloat(data[1][2])) / 2)) *
-                    100
-                ),
-                "Price:",
-                chalk.bgWhite.black(data[1][6]),
-                "| Avg Buy:",
-                chalk.green(
-                  helper.getBuyRateEqualizer(
-                    helper.getAverageHighSlopePrices(
-                      ohlcStore.slice(
-                        ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
-                        ohlcStore.length
-                      )
-                    )
-                  )
-                ),
-                "Avg Sell:",
-                chalk.red(
-                  helper.getSellRateEqualizer(
-                    helper.getAverageLowSlopePrices(
-                      ohlcStore.slice(
-                        ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
-                        ohlcStore.length
-                      )
-                    )
-                  )
-                )
-              );
-
-              if (
-                watchingSlope[watchingSlope.length - 1] <= 0 &&
-                data[1][6] <= dropStart - process.env.MIN_PROFIT
-              ) {
+              if (process.env.NODE_ENV == "development")
                 console.log(
-                  chalk.bgGreen("Dropping and Waiting for Buy Signal..")
+                  "Slope:",
+                  chalk.bgYellow(data[1][5] - data[1][2]),
+                  "% Change:",
+                  chalk.bgYellow(
+                    ((parseFloat(data[1][5]) - parseFloat(data[1][2])) /
+                      ((parseFloat(data[1][5]) + parseFloat(data[1][2])) / 2)) *
+                      100
+                  ),
+                  "Price:",
+                  chalk.bgWhite.black(data[1][6]),
+                  "| Avg Buy:",
+                  chalk.green(
+                    helper.getBuyRateEqualizer(
+                      helper.getAverageHighSlopePrices(
+                        ohlcStore.slice(
+                          ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                          ohlcStore.length
+                        )
+                      )
+                    )
+                  ),
+                  "Avg Sell:",
+                  chalk.red(
+                    helper.getSellRateEqualizer(
+                      helper.getAverageLowSlopePrices(
+                        ohlcStore.slice(
+                          ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                          ohlcStore.length
+                        )
+                      )
+                    )
+                  )
                 );
-              } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
-                console.log(chalk.bgGreen("Going down :)"));
-              } else {
-                //if it goes up but the percentage increase is small wait...
-                console.log(chalk.bgRed("Going up :("), trade);
+              if (process.env.NODE_ENV == "development") {
+                if (
+                  watchingSlope[watchingSlope.length - 1] <= 0 &&
+                  data[1][6] <= dropStart - process.env.MIN_PROFIT
+                ) {
+                  console.log(
+                    chalk.bgGreen("Dropping and Waiting for Buy Signal..")
+                  );
+                } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
+                  console.log(chalk.bgGreen("Going down :)"));
+                } else {
+                  //if it goes up but the percentage increase is small wait...
+                  console.log(chalk.bgRed("Going up :("), trade);
+                }
               }
             } else if (data[2].includes("ticker")) {
+              //was .45 and .5 for the higher, but i want a more graceful
+              if (process.env.NODE_ENV == "development")
+                console.log(
+                  previousBid < data[1].b[0],
+                  watchingSlope[watchingSlope.length - 1] <= 0,
+                  -0.07 < watchingSlope[watchingSlope.length - 1],
+                  parseFloat(data[1].b[0]) <
+                    helper.getSellRateEqualizer(dropStart) -
+                      process.env.MIN_PROFIT,
+                  -0.1 < helper.getAverageEndOfArray(watchingSlope, 5),
+                  watchingSlope.length > 20,
+                  !bought,
+                  "Need to be all true"
+                );
               if (
                 previousBid < data[1].b[0] &&
                 watchingSlope[watchingSlope.length - 1] <= 0 &&
-                -0.45 < watchingSlope[watchingSlope.length - 1] &&
+                -0.15 < watchingSlope[watchingSlope.length - 1] &&
                 parseFloat(data[1].b[0]) <
                   helper.getSellRateEqualizer(dropStart) -
                     process.env.MIN_PROFIT &&
-                -0.5 < helper.getAverageEndOfArray(watchingSlope, 5) &&
+                -0.3 < helper.getAverageEndOfArray(watchingSlope, 5) &&
                 watchingSlope.length > 20 &&
                 !bought
               ) {
@@ -285,12 +309,13 @@ function startTrading(overRideMode) {
                     process.env.COST_PER_BUY / boughtValue
                   );
               }
-              console.log(
-                "Best Ask",
-                chalk.red(data[1].a[0]),
-                "Best Bid",
-                chalk.green(data[1].b[0])
-              );
+              if (process.env.NODE_ENV == "development")
+                console.log(
+                  "Best Ask",
+                  chalk.red(data[1].a[0]),
+                  "Best Bid",
+                  chalk.green(data[1].b[0])
+                );
               previousBid = data[1].b[0];
               if (orderID) {
                 console.log(orderID);
@@ -360,7 +385,7 @@ function startTrading(overRideMode) {
       priceBought = 0;
       wantedPrice = 0;
       krakenRest.api("TradesHistory").then((trades) => {
-        if (trades == undefined) {
+        if (trades.result == undefined) {
           return startTrading();
         }
         trades = Object.entries(trades.result.trades);
@@ -388,6 +413,7 @@ function startTrading(overRideMode) {
             } - Volume: ${sellableVolume}${tradingSymbol}`
           )
         );
+        //get the last trade and if it's been a while and the price is nowhere near it calculate a new wantedPrice to have it make it's money back
         krakenRest
           .api("OHLC", { pair: `${tradingSymbol}/USD` })
           .then((data) => {
@@ -395,7 +421,7 @@ function startTrading(overRideMode) {
             if (data == undefined) {
               return startTrading();
             }
-            data = data.slice(data.length - 45, data.length - 1); //Get data from the last 45 minutes
+            data = data.slice(data.length - 180, data.length - 1); //Get data from the last 45 minutes
 
             pricesList = [];
             slopeList = [];
@@ -412,7 +438,8 @@ function startTrading(overRideMode) {
                   highs.push(parseFloat(item[2]));
               }
             });
-            if (true) {
+
+            if (process.env.LIVE) {
               console.log(
                 asciichart.plot(pricesList, {
                   colors: [asciichart.cyan],
@@ -437,46 +464,45 @@ function startTrading(overRideMode) {
                 })
               );
               console.log("-------------------");
-              console.log(
-                "Average Slope:",
-                chalk.bgYellow(
-                  slopeList.reduce((a, b) => a + b, 0) / slopeList.length
-                )
-              );
-              console.log(
-                "Average Low Slope Prices:",
-                chalk.bgRed(lows.reduce((a, b) => a + b, 0) / lows.length),
-                "Low Target:",
-                chalk.bgRed(
-                  lows
-                    .sort()
-                    .slice(0, 5)
-                    .reduce((a, b) => a + b, 0) / 5
-                )
-              );
-              console.log(
-                "Average High Slope Prices:",
-                chalk.bgGreen(highs.reduce((a, b) => a + b, 0) / highs.length),
-                "High Target:",
-                chalk.bgGreen(
-                  highs
-                    .sort()
-                    .slice(highs.length - 5, highs.length)
-                    .reduce((a, b) => a + b, 0) / 5
-                )
-              );
-              //  console.log(lows, highs);
-              // console.log(JSON.stringify(slopeList));
-              // console.log(JSON.stringify(pricesList));
-              console.log(
-                "Reccomended Minumum Sell Rate:",
-                chalk.bgMagenta(
-                  helper.getSellRateEqualizer(
-                    lows.reduce((a, b) => a + b, 0) / lows.length
-                  )
-                )
-              );
             }
+            console.log(
+              "Average Slope:",
+              chalk.bgYellow(
+                slopeList.reduce((a, b) => a + b, 0) / slopeList.length
+              )
+            );
+            console.log(
+              "Average Low Slope Prices:",
+              chalk.bgRed(lows.reduce((a, b) => a + b, 0) / lows.length),
+              "Low Target:",
+              chalk.bgRed(
+                lows
+                  .sort()
+                  .slice(0, 5)
+                  .reduce((a, b) => a + b, 0) / 5
+              )
+            );
+            console.log(
+              "Average High Slope Prices:",
+              chalk.bgGreen(highs.reduce((a, b) => a + b, 0) / highs.length),
+              "High Target:",
+              chalk.bgGreen(
+                highs
+                  .sort()
+                  .slice(highs.length - 5, highs.length)
+                  .reduce((a, b) => a + b, 0) / 5
+              )
+            );
+
+            console.log(
+              "Reccomended Minumum Sell Rate:",
+              chalk.bgMagenta(
+                helper.getSellRateEqualizer(
+                  lows.reduce((a, b) => a + b, 0) / lows.length
+                )
+              )
+            );
+
             riseStart = helper.getSellRateEqualizer(
               lows.reduce((a, b) => a + b, 0) / lows.length
             );
@@ -496,7 +522,7 @@ function startTrading(overRideMode) {
               if (data[2]) {
                 if (data[2].includes("ohlc")) {
                   if (data[1][5] != 0) ohlcStore.push(data[1]);
-                  //console.log(watchingSlope);
+
                   watchingSlope.push(parseFloat(data[1][5] - data[1][2]));
                   watchingPrice.push(parseFloat(data[1][6]));
 
@@ -526,61 +552,89 @@ function startTrading(overRideMode) {
                       );
                     }
                   }
-
-                  console.log(
-                    "Slope:",
-                    chalk.bgYellow(data[1][5] - data[1][2]),
-                    "% Change:",
-                    chalk.bgYellow(
-                      ((parseFloat(data[1][5]) - parseFloat(data[1][2])) /
-                        ((parseFloat(data[1][5]) + parseFloat(data[1][2])) /
-                          2)) *
-                        100
-                    ),
-                    "Price:",
-                    chalk.bgWhite.black(data[1][6]),
-                    "| Avg Buy:",
-                    chalk.green(
-                      helper.getBuyRateEqualizer(
-                        helper.getAverageHighSlopePrices(
-                          ohlcStore.slice(
-                            ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
-                            ohlcStore.length
-                          )
-                        )
-                      )
-                    ),
-                    "Avg Sell:",
-                    chalk.red(
-                      helper.getSellRateEqualizer(
-                        helper.getAverageLowSlopePrices(
-                          ohlcStore.slice(
-                            ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
-                            ohlcStore.length
-                          )
-                        )
-                      )
-                    )
-                  );
-
-                  if (
-                    watchingSlope[watchingSlope.length - 1] >= 0 &&
-                    data[1][6] >= riseStart + process.env.MIN_PROFIT
-                  ) {
-                    console.log(
-                      chalk.bgRed("Raising and Waiting for Sell Signal..")
+                  if (watchingSlope.length > 750) {
+                    watchingSlope = watchingSlope.slice(
+                      500,
+                      watchingSlope.length
                     );
-                  } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
-                    console.log(chalk.bgGreen("Going down :("));
-                  } else {
-                    //if it goes up but the percentage increase is small wait...
-                    console.log(chalk.bgRed("Going up :)"), trade);
+                    watchingPrice = watchingPrice.slice(
+                      500,
+                      watchingPrice.length
+                    );
+                  }
+                  if (process.env.NODE_ENV == "development") {
+                    console.log(
+                      "Slope:",
+                      chalk.bgYellow(data[1][5] - data[1][2]),
+                      "% Change:",
+                      chalk.bgYellow(
+                        ((parseFloat(data[1][5]) - parseFloat(data[1][2])) /
+                          ((parseFloat(data[1][5]) + parseFloat(data[1][2])) /
+                            2)) *
+                          100
+                      ),
+                      "Price:",
+                      chalk.bgWhite.black(data[1][6]),
+                      "| Avg Buy:",
+                      chalk.green(
+                        helper.getBuyRateEqualizer(
+                          helper.getAverageHighSlopePrices(
+                            ohlcStore.slice(
+                              ohlcStore.length <= 45
+                                ? 0
+                                : ohlcStore.length - 45,
+                              ohlcStore.length
+                            )
+                          )
+                        )
+                      ),
+                      "Avg Sell:",
+                      chalk.red(
+                        helper.getSellRateEqualizer(
+                          helper.getAverageLowSlopePrices(
+                            ohlcStore.slice(
+                              ohlcStore.length <= 45
+                                ? 0
+                                : ohlcStore.length - 45,
+                              ohlcStore.length
+                            )
+                          )
+                        )
+                      )
+                    );
+
+                    if (
+                      watchingSlope[watchingSlope.length - 1] >= 0 &&
+                      data[1][6] >= riseStart + process.env.MIN_PROFIT
+                    ) {
+                      console.log(
+                        chalk.bgRed("Raising and Waiting for Sell Signal..")
+                      );
+                    } else if (watchingSlope[watchingSlope.length - 1] <= 0) {
+                      console.log(chalk.bgGreen("Going down :("));
+                    } else {
+                      //if it goes up but the percentage increase is small wait...
+                      console.log(chalk.bgRed("Going up :)"), trade);
+                    }
                   }
                 } else if (data[2].includes("ticker")) {
                   // if (wantedPrice < riseStart) { //either do this in the averaging of the rise start or something else to keep it done we'll see
                   //   riseStart = (wantedPrice + riseStart) / 2;
                   // }
                   //readjust parts
+                  if (process.env.NODE_ENV == "development")
+                    console.log(
+                      previousAsk >= data[1].a[0],
+                      watchingSlope[watchingSlope.length - 1] >= 0,
+                      0.75 > watchingSlope[watchingSlope.length - 1],
+                      1.3 > helper.getAverageEndOfArray(watchingSlope, 5),
+                      parseFloat(data[1].a[0]) >=
+                        parseFloat(wantedPrice) +
+                          parseFloat(process.env.MIN_PROFIT),
+                      watchingSlope.length > 20,
+                      !sold,
+                      "Must be all true"
+                    );
                   if (
                     previousAsk >= data[1].a[0] &&
                     watchingSlope[watchingSlope.length - 1] >= 0 &&
@@ -619,12 +673,13 @@ function startTrading(overRideMode) {
                       );
                     }
                   }
-                  console.log(
-                    "Best Ask",
-                    chalk.red(data[1].a[0]),
-                    "Best Bid",
-                    chalk.green(data[1].b[0])
-                  );
+                  if (process.env.NODE_ENV == "development")
+                    console.log(
+                      "Best Ask",
+                      chalk.red(data[1].a[0]),
+                      "Best Bid",
+                      chalk.green(data[1].b[0])
+                    );
                   previousAsk = data[1].a[0];
                   if (orderID) {
                     console.log(orderID);

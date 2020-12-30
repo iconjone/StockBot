@@ -7,7 +7,7 @@
     "test": "test",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
-    "start": "node index.js"
+    "start": "pm2 start index.js --max-memory-restart 45M  -f"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "kraken-api": "^1.0.1",
     "node-fetch": "^2.6.1",
     "plotly": "^1.0.6",
+    "pm2": "^4.5.1",
     "ws": "^7.4.1"
   },
   "devDependencies": {
