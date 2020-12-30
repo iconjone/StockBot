@@ -12,9 +12,23 @@ const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
 const botID = process.env.BOT_ID; // GroupMeBot ID
 
-mode = undefined; // If mode is true, we are in buy mode, else if it is in false we are in sell mode
+const pm2 = require("pm2");
+restart = true;
 
-max_allocation = 15;
+setTimeout(() => {
+  pm2.connect(() => {
+    setInterval(function shouldRestart() {
+      console.log(restart);
+      if (restart) {
+        pm2.restart("index");
+      } else {
+        restart = true;
+      }
+    }, 60000);
+  });
+}, 15000);
+
+mode = undefined; // If mode is true, we are in buy mode, else if it is in false we are in sell mode
 
 //Testing for watching trade
 
@@ -201,10 +215,11 @@ function startTrading(overRideMode) {
 
                 if (newDrop) {
                   dropStart = (dropStart + newDrop) / 2;
-                  console.log(
-                    "New Reccomended Maximum Buy Rate:",
-                    chalk.bgMagenta(dropStart)
-                  );
+                  if (process.env.NODE_ENV == "development")
+                    console.log(
+                      "New Reccomended Maximum Buy Rate:",
+                      chalk.bgMagenta(dropStart)
+                    );
                 }
               }
               if (watchingSlope.length > 750) {
@@ -264,6 +279,7 @@ function startTrading(overRideMode) {
                 }
               }
             } else if (data[2].includes("ticker")) {
+              restart = false;
               //was .45 and .5 for the higher, but i want a more graceful
               if (process.env.NODE_ENV == "development")
                 console.log(
@@ -561,19 +577,21 @@ function startTrading(overRideMode) {
                     );
                     if (newStart < wantedPrice) {
                       riseStart = wantedPrice;
-                      console.log(
-                        "New Reccomended Minumum Buy Rate:",
-                        chalk.bgMagenta(riseStart)
-                      );
+                      if (process.env.NODE_ENV == "development")
+                        console.log(
+                          "New Reccomended Minumum Buy Rate:",
+                          chalk.bgMagenta(riseStart)
+                        );
                     } else if (
                       newStart &&
                       newStart < watchingPrice[watchingPrice.length - 1]
                     ) {
                       riseStart = (riseStart + newStart) / 2;
-                      console.log(
-                        "New Reccomended Minumum Buy Rate:",
-                        chalk.bgMagenta(riseStart)
-                      );
+                      if (process.env.NODE_ENV == "development")
+                        console.log(
+                          "New Reccomended Minumum Buy Rate:",
+                          chalk.bgMagenta(riseStart)
+                        );
                     }
                   }
                   if (watchingSlope.length > 750) {
@@ -644,6 +662,7 @@ function startTrading(overRideMode) {
                     }
                   }
                 } else if (data[2].includes("ticker")) {
+                  restart = false;
                   // if (wantedPrice < riseStart) { //either do this in the averaging of the rise start or something else to keep it done we'll see
                   //   riseStart = (wantedPrice + riseStart) / 2;
                   // }
