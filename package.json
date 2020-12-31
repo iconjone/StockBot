@@ -7,7 +7,8 @@
     "test": "test",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
-    "start": "pm2 start index.js --max-memory-restart 45M  -f"
+    "start": "pm2 start index.js --max-memory-restart 45M  -f",
+    "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M  -f"
   },
   "repository": {
     "type": "git",

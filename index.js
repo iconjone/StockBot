@@ -188,13 +188,14 @@ function startTrading(overRideMode) {
         }
 
         dropStart =
-          (helper.getBuyRateEqualizer(
+          helper.getBuyRateEqualizer(
             highs.reduce((a, b) => a + b, 0) / highs.length
-          ) +
-            helper.getBuyRateEqualizer(
-              lows.reduce((a, b) => a + b, 0) / lows.length
-            )) /
-          2;
+          ) *
+            0.75 +
+          helper.getBuyRateEqualizer(
+            lows.reduce((a, b) => a + b, 0) / lows.length
+          ) *
+            0.25;
         bot.send(
           `Buying Mode - Low Target: $${
             lows
@@ -208,7 +209,7 @@ function startTrading(overRideMode) {
               .reduce((a, b) => a + b, 0) / 5
           } - Reccomended Maximum Buy Rate: $${helper.getBuyRateEqualizer(
             highs.reduce((a, b) => a + b, 0) / highs.length
-          )}`
+          )} - Current Price: $${pricesList[pricesList.length - 1]}`
         );
         //Start reading the Wewsocket connections
 
@@ -247,12 +248,13 @@ function startTrading(overRideMode) {
                   )
                 );
                 if (newDropHigh && newDropLow) {
-                  dropStart = (dropStart + newDropHigh + newDropLow) / 3;
-                  if (process.env.NODE_ENV == "development")
-                    console.log(
-                      "New Reccomended Maximum Buy Rate:",
-                      chalk.bgMagenta(dropStart)
-                    );
+                  dropStart =
+                    dropStart * 0.5 + newDropHigh * 0.3 + newDropLow * 0.2;
+                  //  if (process.env.NODE_ENV == "development")
+                  console.log(
+                    "New Reccomended Maximum Buy Rate:",
+                    chalk.bgMagenta(dropStart)
+                  );
                 }
               }
               if (watchingSlope.length > 750) {
@@ -394,7 +396,7 @@ function startTrading(overRideMode) {
                             });
                         }
                     });
-                }, 15000);
+                }, 25000);
               }
             }
           }
@@ -422,6 +424,7 @@ function startTrading(overRideMode) {
             } else if (data[1] == "ownTrades") {
               if (bought) {
                 console.log("Order confirmed..", JSON.stringify(data[0]));
+                bought = false;
                 krakenWebSocket.api("unsubscribe", "ohlc", [
                   `${tradingSymbol}/USD`,
                 ]); //Subscribe to ohlc
@@ -803,7 +806,7 @@ function startTrading(overRideMode) {
                                 });
                             }
                         });
-                    }, 15000);
+                    }, 25000);
                   }
                 }
               }
@@ -830,6 +833,7 @@ function startTrading(overRideMode) {
                 } else if (data[1] == "ownTrades") {
                   if (sold) {
                     console.log("Order confirmed..", JSON.stringify(data[0]));
+                    sold = false;
                     bot.send("ORDER Confirmed");
                     krakenWebSocket.api("unsubscribe", "ohlc", [
                       `${tradingSymbol}/USD`,
