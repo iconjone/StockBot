@@ -4,7 +4,7 @@
   "description": "A ~OS bot to do HFT",
   "main": "index.js",
   "scripts": {
-    "test": "test",
+    "test": "node test",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
     "start": "pm2 start index.js --max-memory-restart 45M  -f",

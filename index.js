@@ -31,7 +31,7 @@ if (process.env.NODE_ENV != "development")
     });
   }, 15000);
 
-mode = undefined; // If mode is true, we are in buy mode, else if it is in false we are in sell mode
+mode = true; // If mode is true, we are in buy mode, else if it is in false we are in sell mode - set to true as default
 
 //Testing for watching trade
 
@@ -59,6 +59,7 @@ function startTrading(overRideMode) {
   krakenWebSocket.api("subscribe", "openOrders"); // Subscribe to orders
   tradingSymbol = "";
   sellableVolume = 0;
+  balanceCash = 0;
   krakenRest.api("Balance").then((data) => {
     let balance = data.result;
     if (balance == undefined) {
@@ -66,18 +67,27 @@ function startTrading(overRideMode) {
     }
     let balanceArr = Object.entries(balance);
     console.log(chalk.bgCyan.underline.bold("Starting Balance: "));
+    foundSelling = false;
     balanceArr.forEach((item, i) => {
       if (parseFloat(item[1]) != 0) {
         console.log(
           chalk.bgCyan(`${item[0].substring(1, item[0].length)} - ${item[1]}`)
         );
       }
+
       if (item[0] != "ZUSD" && parseFloat(item[1]) >= 0.001) {
+        console.log(item);
         mode = false;
+        foundSelling = true;
         tradingSymbol = item[0].substring(1, item[0].length); //get tradingSymbol
+        if (tradingSymbol == "XBT") tradingSymbol = "BTC";
         sellableVolume = parseFloat(item[1]);
-      } else {
-        mode = true;
+      } else if (!foundSelling) {
+        tradingSymbol = "ETH";
+        // crete function to determine best crypto to trade -> must make min_profit a calcualtable thingy
+        if (item[0] == "ZUSD") {
+          balanceCash = item[1];
+        }
       }
     });
     if (overRideMode) mode = overRideMode;
@@ -87,7 +97,7 @@ function startTrading(overRideMode) {
     // //Force mode to be true for Buying Mode
     //  mode = true;
     //Force tradingSymbol for Selling or Buying
-    tradingSymbol = "ETH";
+
     if (mode) {
       bought = false;
       console.log(chalk.bold.underline.bgCyan("Buying Mode"));
@@ -255,6 +265,11 @@ function startTrading(overRideMode) {
                     "New Reccomended Maximum Buy Rate:",
                     chalk.bgMagenta(dropStart)
                   );
+                  bot.send(
+                    `New Reccomended Max Buy Rate: $${dropStart} | Current Price: $${
+                      watchingPrice[watchingPrice.length - 1]
+                    }`
+                  );
                 }
               }
               if (watchingSlope.length > 750) {
@@ -323,7 +338,7 @@ function startTrading(overRideMode) {
                   -0.07 < watchingSlope[watchingSlope.length - 1],
                   parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT,
                   -0.1 < helper.getAverageEndOfArray(watchingSlope, 5),
-                  -0.75 < helper.getAverageEndOfArray(watchingSlope, 50),
+                  -0.75 > helper.getAverageEndOfArray(watchingSlope, 50),
                   watchingSlope.length > 20,
                   !bought,
                   "Need to be all true"
@@ -334,7 +349,7 @@ function startTrading(overRideMode) {
                 -0.07 < watchingSlope[watchingSlope.length - 1] &&
                 parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT &&
                 -0.1 < helper.getAverageEndOfArray(watchingSlope, 5) &&
-                -0.75 < helper.getAverageEndOfArray(watchingSlope, 50) &&
+                -0.75 > helper.getAverageEndOfArray(watchingSlope, 50) &&
                 watchingSlope.length > 20 &&
                 !bought
               ) {
@@ -367,7 +382,8 @@ function startTrading(overRideMode) {
                     krakenWebSocket,
                     `${tradingSymbol}/USD`,
                     boughtValue,
-                    process.env.COST_PER_BUY / boughtValue
+                    ((process.env.PERCENTAGE_PER_BUY / 100) * balanceCash) /
+                      boughtValue
                   );
               }
               if (process.env.NODE_ENV == "development")
@@ -468,6 +484,12 @@ function startTrading(overRideMode) {
             wantedPrice = helper.getSellRateEqualizer(priceBought);
             volume = parseFloat(item.vol);
           }
+          //If you need to manually do it
+          if (tradingSymbol != "ETH") {
+            priceBought = 29830;
+            wantedPrice = helper.getSellRateEqualizer(priceBought);
+            volume = sellableVolume;
+          }
         });
         console.log(
           chalk.bold.bgGreen(
@@ -559,28 +581,26 @@ function startTrading(overRideMode) {
                   .reduce((a, b) => a + b, 0) / 5
               )
             );
-
+            //rise start averager was edited from pure average to 3/4s
             console.log(
               "Reccomended Minumum Sell Rate:",
               chalk.bgMagenta(
-                (helper.getSellRateEqualizer(
-                  highs.reduce((a, b) => a + b, 0) / highs.length
+                helper.getSellRateEqualizer(
+                  (highs.reduce((a, b) => a + b, 0) / highs.length) * 0.75
                 ) +
                   helper.getSellRateEqualizer(
-                    lows.reduce((a, b) => a + b, 0) / lows.length
-                  )) /
-                  2
+                    (lows.reduce((a, b) => a + b, 0) / lows.length) * 0.25
+                  )
               )
             );
 
             riseStart =
-              (helper.getSellRateEqualizer(
-                highs.reduce((a, b) => a + b, 0) / highs.length
+              helper.getSellRateEqualizer(
+                (highs.reduce((a, b) => a + b, 0) / highs.length) * 0.75
               ) +
-                helper.getSellRateEqualizer(
-                  lows.reduce((a, b) => a + b, 0) / lows.length
-                )) /
-              2;
+              helper.getSellRateEqualizer(
+                (lows.reduce((a, b) => a + b, 0) / lows.length) * 0.25
+              );
 
             bot.send(
               `Bought at: ${priceBought} | Breakeven Price: ${wantedPrice} | Estimated Sell Price: $${riseStart} | Estimated Jump $${
@@ -629,7 +649,8 @@ function startTrading(overRideMode) {
                         )
                       )
                     );
-                    newStart = (riseStart + newStartLow + newStartHigh) / 3;
+                    newStart =
+                      riseStart * 0.5 + newStartLow * 0.2 + newStartHigh * 0.3; //edited aversge code
 
                     if (newStart && newStart < wantedPrice) {
                       riseStart = wantedPrice;
@@ -648,6 +669,11 @@ function startTrading(overRideMode) {
                           "New Reccomended Minumum Buy Rate:",
                           chalk.bgMagenta(riseStart)
                         );
+                      bot.send(
+                        `New Reccomended Min Buy Rate: $${riseStart} | Current Price: $${
+                          watchingPrice[watchingPrice.length - 1]
+                        }`
+                      );
                     }
                   }
                   if (watchingSlope.length > 750) {
@@ -762,7 +788,11 @@ function startTrading(overRideMode) {
                       "SOLD AT $" +
                         soldValue +
                         " Equalizer: $" +
-                        helper.getBuyRateEqualizer(parseFloat(soldValue))
+                        helper.getBuyRateEqualizer(
+                          parseFloat(soldValue) +
+                            " Profit: $" +
+                            (soldValue - priceBought) * sellableVolume
+                        )
                     );
                     trade.push({
                       type: "sell",
