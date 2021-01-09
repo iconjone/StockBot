@@ -1,4 +1,5 @@
 fee = 0.0016;
+
 function buy(krakenWebSocket, pair, price, volume) {
   krakenWebSocket.api("addOrder", "addOrder", [pair], {
     ordertype: "limit",
@@ -89,6 +90,19 @@ function getAverageEndOfArray(arr, length) {
   return sum / length;
 }
 
+function getSMA(ohlcStore, length) {
+  ohlcStore = ohlcStore.slice(ohlcStore.length - length);
+  ohlcStore = ohlcStore.map((x) => parseFloat(x[6]));
+  sum = ohlcStore.reduce((a, b) => a + b, 0);
+  return sum / length;
+}
+
+function getA0(ohlcStore, period) {
+  period35 = getSMA(ohlcStore, period * 7);
+  period5 = getSMA(ohlcStore, period * 1);
+  return period5 - period35;
+}
+
 module.exports = {
   buy,
   sell,
@@ -97,4 +111,5 @@ module.exports = {
   getAverageHighSlopePrices,
   getAverageLowSlopePrices,
   getAverageEndOfArray,
+  getA0,
 };

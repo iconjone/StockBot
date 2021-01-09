@@ -226,6 +226,8 @@ function startTrading(overRideMode) {
         ohlcStore = [];
         watchingSlope = [];
         watchingPrice = [];
+        watchingAO = [];
+        watchingAOBig = [];
 
         previousBid = 0;
 
@@ -239,12 +241,16 @@ function startTrading(overRideMode) {
 
               watchingSlope.push(parseFloat(data[1][5] - data[1][2]));
               watchingPrice.push(parseFloat(data[1][6]));
+              if (ohlcStore.length > 35)
+                watchingAO.push(helper.getA0(ohlcStore, 5));
+              if (ohlcStore.length > 175)
+                watchingAOBig.push(helper.getA0(ohlcStore, 25));
 
               if (watchingSlope.length % 45 == 0) {
                 newDropHigh = helper.getBuyRateEqualizer(
                   helper.getAverageHighSlopePrices(
                     ohlcStore.slice(
-                      ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                      ohlcStore.length <= 180 ? 0 : ohlcStore.length - 180,
                       ohlcStore.length
                     )
                   ) //I feel like this should be average Low slope prices - Maybe change it back we'll see - We did this because we are looking at the average high and then going from there
@@ -252,14 +258,14 @@ function startTrading(overRideMode) {
                 newDropLow = helper.getBuyRateEqualizer(
                   helper.getAverageLowSlopePrices(
                     ohlcStore.slice(
-                      ohlcStore.length <= 45 ? 0 : ohlcStore.length - 45,
+                      ohlcStore.length <= 180 ? 0 : ohlcStore.length - 180,
                       ohlcStore.length
                     )
                   )
                 );
                 if (newDropHigh && newDropLow) {
                   dropStart =
-                    dropStart * 0.5 + newDropHigh * 0.3 + newDropLow * 0.2;
+                    dropStart * 0.5 + newDropHigh * 0.15 + newDropLow * 0.35;
                   //  if (process.env.NODE_ENV == "development")
                   console.log(
                     "New Reccomended Maximum Buy Rate:",
@@ -275,6 +281,15 @@ function startTrading(overRideMode) {
               if (watchingSlope.length > 750) {
                 watchingSlope = watchingSlope.slice(500, watchingSlope.length);
                 watchingPrice = watchingPrice.slice(500, watchingPrice.length);
+                ohlcStore = ohlcStore.slice(500, ohlcStore.length);
+                watchingAO = watchingAO.slice(
+                  watchingAO.length <= 500 ? 0 : watchingAO.length - 500,
+                  watchingAO.length
+                );
+                watchingAOBig = watchingAOBig.slice(
+                  watchingAOBig.length <= 500 ? 0 : watchingAOBig.length - 500,
+                  watchingAOBig.length
+                );
               }
 
               if (process.env.NODE_ENV == "development")
@@ -310,12 +325,18 @@ function startTrading(overRideMode) {
                         )
                       )
                     )
-                  )
+                  ),
+                  "AO: ",
+                  chalk.bgYellow(watchingAO[watchingAO.length - 1]),
+                  "BIG AO:",
+                  chalk.bgYellow(watchingAOBig[watchingAOBig.length - 1])
                 );
+
               if (process.env.NODE_ENV == "development") {
                 if (
                   watchingSlope[watchingSlope.length - 1] <= 0 &&
-                  data[1][6] <= dropStart - process.env.MIN_PROFIT
+                  data[1][6] <= dropStart - process.env.MIN_PROFIT &&
+                  watchingAOBig[watchingAOBig.length - 1] < -6
                 ) {
                   console.log(
                     chalk.bgGreen("Dropping and Waiting for Buy Signal..")
@@ -330,31 +351,71 @@ function startTrading(overRideMode) {
               }
             } else if (data[2].includes("ticker")) {
               restart = false;
+              highRange = helper.getBuyRateEqualizer(
+                helper.getAverageHighSlopePrices(
+                  ohlcStore.slice(
+                    ohlcStore.length <= 90 ? 0 : ohlcStore.length - 90,
+                    ohlcStore.length
+                  )
+                )
+              );
+              lowRange = helper.getSellRateEqualizer(
+                helper.getAverageLowSlopePrices(
+                  ohlcStore.slice(
+                    ohlcStore.length <= 90 ? 0 : ohlcStore.length - 90,
+                    ohlcStore.length
+                  )
+                )
+              );
+
+              range = highRange - lowRange;
+              //Range is about 4
+
               //was .45 and .5 for the higher, but i want a more graceful
-              if (process.env.NODE_ENV == "development")
+              //Need to make those numbers dynamic, basedd on the range of the high and low prices....
+              if (process.env.NODE_ENV == "development") {
+                console.log(highRange, lowRange, range);
                 console.log(
-                  previousBid < data[1].b[0],
-                  watchingSlope[watchingSlope.length - 1] <= 0,
-                  -0.07 < watchingSlope[watchingSlope.length - 1],
-                  parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT,
-                  -0.1 < helper.getAverageEndOfArray(watchingSlope, 5),
-                  -0.75 > helper.getAverageEndOfArray(watchingSlope, 50),
-                  watchingSlope.length > 20,
+                  parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT, //the profit might need to be range/2
+                  previousBid <= data[1].b[0],
+                  watchingSlope[watchingSlope.length - 1] <= -2.5,
+                  watchingSlope[watchingSlope.length - 1] >=
+                    helper.getAverageEndOfArray(watchingSlope, 5), //ff
+                  -1.5 > watchingAO[watchingAO.length - 1], //Just in case kinda thing (means it has to be at least 3)
+                  watchingAO[watchingAO.length - 1] >
+                    helper.getAverageEndOfArray(watchingAO, 2), //failed was 5, 10
+                  watchingPrice[watchingPrice.length - 1] <
+                    helper.getAverageEndOfArray(watchingPrice, 5), // failed
+                  watchingPrice[watchingPrice.length - 1] <
+                    helper.getAverageEndOfArray(watchingPrice, 50),
+                  watchingSlope.length > 175,
+                  watchingAOBig[watchingAOBig.length - 1] < -6,
                   !bought,
                   "Need to be all true"
                 );
+              }
               if (
-                previousBid < data[1].b[0] &&
-                watchingSlope[watchingSlope.length - 1] <= 0 &&
-                -0.07 < watchingSlope[watchingSlope.length - 1] &&
-                parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT &&
-                -0.1 < helper.getAverageEndOfArray(watchingSlope, 5) &&
-                -0.75 > helper.getAverageEndOfArray(watchingSlope, 50) &&
-                watchingSlope.length > 20 &&
+                parseFloat(data[1].b[0]) < dropStart - process.env.MIN_PROFIT && //the profit might need to be range/2
+                previousBid <= data[1].b[0] &&
+                watchingSlope[watchingSlope.length - 1] <= -2.5 &&
+                watchingSlope[watchingSlope.length - 1] >=
+                  helper.getAverageEndOfArray(watchingSlope, 5) && //ff
+                -1.5 > watchingAO[watchingAO.length - 1] && //Just in case kinda thing (means it has to be at least 3)
+                watchingAO[watchingAO.length - 1] >
+                  helper.getAverageEndOfArray(watchingAO, 2) && //failed was 5, 10
+                watchingPrice[watchingPrice.length - 1] <
+                  helper.getAverageEndOfArray(watchingPrice, 5) && // failed
+                watchingPrice[watchingPrice.length - 1] <
+                  helper.getAverageEndOfArray(watchingPrice, 50) &&
+                watchingSlope.length > 175 &&
+                watchingAOBig[watchingAOBig.length - 1] < -6 &&
                 !bought
               ) {
                 bought = true;
-                boughtValue = (parseFloat(data[1].b[0]) + 0.01).toFixed(2);
+                boughtValue = (
+                  parseFloat(data[1].b[0]) * 0.75 +
+                  watchingPrice[watchingPrice.length - 1] * 0.25
+                ).toFixed(2);
                 console.log(
                   chalk.bgCyan("BUY AT") +
                     chalk.bgMagenta(" $" + boughtValue) +
@@ -372,12 +433,13 @@ function startTrading(overRideMode) {
                 );
                 trade.push({
                   type: "buy",
-                  bought_at: parseFloat(data[1].b[0]) + 0.01,
+                  bought_at: boughtValue,
                   equalize_at: helper.getSellRateEqualizer(
                     parseFloat(boughtValue)
                   ),
                 });
-                if (process.env.LIVE)
+                if (parseInt(process.env.LIVE))
+                  //change to allow buy again
                   helper.buy(
                     krakenWebSocket,
                     `${tradingSymbol}/USD`,
@@ -394,29 +456,10 @@ function startTrading(overRideMode) {
                   chalk.green(data[1].b[0])
                 );
               previousBid = data[1].b[0];
-              if (orderID) {
-                console.log(orderID);
-                setTimeout(() => {
-                  krakenRest
-                    .api("QueryOrders", { txid: orderID })
-                    .then((data) => {
-                      console.log(data);
-                      if (data && bought)
-                        if (data.result[orderID].status == "open") {
-                          krakenRest
-                            .api("CancelOrder", { txid: orderID })
-                            .then((data) => {
-                              console.log("Canceled Order", data);
-                              bot.send("ORDER Timeout - Canceled");
-                              orderID = null;
-                            });
-                        }
-                    });
-                }, 25000);
-              }
             }
           }
         });
+        boughtTimeout = null;
         krakenWebSocket.wsAuth.on("message", (data) => {
           data = JSON.parse(data);
           if (data.event != "heartbeat") {
@@ -427,11 +470,33 @@ function startTrading(overRideMode) {
                 if (data[0][0]) {
                   id = Object.entries(data[0][0])[0][0];
                   if (data[0][0][id]) {
+                    if (orderID != id) {
+                      clearTimeout(boughtTimeout);
+                    }
                     orderID = id;
                     if (data[0][0][id].status == "canceled") {
                       bot.send("ORDER Failed - Canceled");
                       bought = false;
                       trade.pop();
+                    }
+                    if (orderID) {
+                      boughtTimeout = setTimeout(() => {
+                        krakenRest
+                          .api("QueryOrders", { txid: orderID })
+                          .then((data) => {
+                            console.log(data);
+                            if (data && bought)
+                              if (data.result[orderID].status == "open") {
+                                krakenRest
+                                  .api("CancelOrder", { txid: orderID })
+                                  .then((data) => {
+                                    console.log("Canceled Order", data);
+                                    bot.send("ORDER Timeout - Canceled");
+                                    orderID = null;
+                                  });
+                              }
+                          });
+                      }, 25000);
                     }
                   }
                 }
@@ -485,11 +550,11 @@ function startTrading(overRideMode) {
             volume = parseFloat(item.vol);
           }
           //If you need to manually do it
-          if (tradingSymbol != "ETH") {
-            priceBought = 29830;
-            wantedPrice = helper.getSellRateEqualizer(priceBought);
-            volume = sellableVolume;
-          }
+          // if (tradingSymbol != "ETH") {
+          //   priceBought = 29830;
+          //   wantedPrice = helper.getSellRateEqualizer(priceBought);
+          //   volume = sellableVolume;
+          // }
         });
         console.log(
           chalk.bold.bgGreen(
@@ -617,6 +682,8 @@ function startTrading(overRideMode) {
             ohlcStore = [];
             watchingSlope = [];
             watchingPrice = [];
+            watchingAO = [];
+            watchingAOBig = [];
 
             previousAsk = 0;
             sold = false;
@@ -630,6 +697,10 @@ function startTrading(overRideMode) {
 
                   watchingSlope.push(parseFloat(data[1][5] - data[1][2]));
                   watchingPrice.push(parseFloat(data[1][6]));
+                  if (ohlcStore.length > 35)
+                    watchingAO.push(helper.getA0(ohlcStore, 5));
+                  if (ohlcStore.length > 175)
+                    watchingAOBig.push(helper.getA0(ohlcStore, 25));
 
                   if (watchingSlope.length % 45 == 0) {
                     newStart = 0;
@@ -685,7 +756,14 @@ function startTrading(overRideMode) {
                       500,
                       watchingPrice.length
                     );
+                    ohlcStore = ohlcStore.slice(500, ohlcStore.length);
+                    watchingAO = watchingAO.slice(500, watchingAO.length);
+                    watchingAOBig = watchingAOBig.slice(
+                      500,
+                      watchingAOBig.length
+                    );
                   }
+
                   if (process.env.NODE_ENV == "development") {
                     console.log(
                       "Slope:",
@@ -724,7 +802,11 @@ function startTrading(overRideMode) {
                             )
                           )
                         )
-                      )
+                      ),
+                      "AO: ",
+                      chalk.bgYellow(watchingAO[watchingAO.length - 1]),
+                      "BIG AO:",
+                      chalk.bgYellow(watchingAOBig[watchingAOBig.length])
                     );
 
                     if (
@@ -758,7 +840,7 @@ function startTrading(overRideMode) {
                       parseFloat(data[1].a[0]) >=
                         parseFloat(wantedPrice) +
                           parseFloat(process.env.MIN_PROFIT),
-                      watchingSlope.length > 20,
+                      watchingSlope.length > 35,
                       !sold,
                       "Must be all true"
                     );
@@ -770,11 +852,20 @@ function startTrading(overRideMode) {
                     parseFloat(data[1].a[0]) >=
                       parseFloat(wantedPrice) +
                         parseFloat(process.env.MIN_PROFIT) &&
-                    watchingSlope.length > 20 &&
+                    watchingSlope.length > 35 &&
                     !sold
                   ) {
                     sold = true;
                     soldValue = (parseFloat(data[1].a[0]) - 0.01).toFixed(2);
+                    if (
+                      (soldValue + watchingPrice[watchingPrice.length - 1]) /
+                        2 >=
+                      parseFloat(wantedPrice) +
+                        parseFloat(process.env.MIN_PROFIT)
+                    )
+                      soldValue =
+                        (soldValue + watchingPrice[watchingPrice.length - 1]) /
+                        2;
                     console.log(
                       chalk.bgCyan("SOLD AT") +
                         chalk.bgMagenta(" $" + soldValue) +
@@ -801,7 +892,7 @@ function startTrading(overRideMode) {
                         parseFloat(soldValue)
                       ),
                     });
-                    if (process.env.LIVE) {
+                    if (parseInt(process.env.LIVE)) {
                       helper.sell(
                         krakenWebSocket,
                         `${tradingSymbol}/USD`,
@@ -820,27 +911,11 @@ function startTrading(overRideMode) {
                   previousAsk = data[1].a[0];
                   if (orderID) {
                     console.log(orderID);
-                    setTimeout(() => {
-                      krakenRest
-                        .api("QueryOrders", { txid: orderID })
-                        .then((data) => {
-                          console.log(data);
-                          if (data && sold)
-                            if (data.result[orderID].status == "open") {
-                              krakenRest
-                                .api("CancelOrder", { txid: orderID })
-                                .then((data) => {
-                                  console.log("Canceled Order", data);
-                                  bot.send("ORDER Timeout - Canceled");
-                                  orderID = null;
-                                });
-                            }
-                        });
-                    }, 25000);
                   }
                 }
               }
             });
+            soldTimeout = null;
             krakenWebSocket.wsAuth.on("message", (data) => {
               data = JSON.parse(data);
               if (data.event != "heartbeat") {
@@ -851,12 +926,32 @@ function startTrading(overRideMode) {
                     if (data[0][0]) {
                       id = Object.entries(data[0][0])[0][0];
                       if (data[0][0][id]) {
+                        if (orderID != id) {
+                          clearTimeout(soldTimeout);
+                        }
                         orderID = id;
                         if (data[0][0][id].status == "canceled") {
                           bot.send("ORDER Failed - Canceled");
                           sold = false;
                           trade.POP;
                         }
+                        soldTimeout = setTimeout(() => {
+                          krakenRest
+                            .api("QueryOrders", { txid: orderID })
+                            .then((data) => {
+                              console.log(data);
+                              if (data && sold)
+                                if (data.result[orderID].status == "open") {
+                                  krakenRest
+                                    .api("CancelOrder", { txid: orderID })
+                                    .then((data) => {
+                                      console.log("Canceled Order", data);
+                                      bot.send("ORDER Timeout - Canceled");
+                                      orderID = null;
+                                    });
+                                }
+                            });
+                        }, 25000);
                       }
                     }
                   }

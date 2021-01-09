@@ -4,27 +4,27 @@
 
 const fetch = require("node-fetch");
 
-var http = require("http");
+// var http = require("http");
 
 class GroupMeBot {
   constructor(botID) {
     this.botID = botID;
-    this.server = http.createServer(function (req, res) {
-      if (req.url == "/") {
-        //check the URL of the current request
-
-        // set response header
-        res.writeHead(200, { "Content-Type": "text/json" });
-
-        // set response content
-        res.write('{"PRETTY COOL": "WOW"}');
-        res.end();
-      }
-      // 2 - creating server
-
-      console.log(req, res);
-    });
-    this.server.listen(5000);
+    // this.server = http.createServer(function (req, res) {
+    //   if (req.url == "/") {
+    //     //check the URL of the current request
+    //
+    //     // set response header
+    //     res.writeHead(200, { "Content-Type": "text/json" });
+    //
+    //     // set response content
+    //     res.write('{"PRETTY COOL": "WOW"}');
+    //     res.end();
+    //   }
+    //   // 2 - creating server
+    //
+    //   console.log(req, res);
+    // });
+    // this.server.listen(5000);
   }
 
   send(message) {
