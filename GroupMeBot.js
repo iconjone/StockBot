@@ -1,30 +1,36 @@
-// //const http = require("http");
-// const hostname = "127.0.0.1";
-// const port = process.env.PORT || 3000;
+const express = require("express");
+var bodyParser = require("body-parser");
+
+const port = process.env.PORT || 3000;
+var jsonParser = bodyParser.json();
 
 const fetch = require("node-fetch");
+
+const pm2 = require("pm2");
 
 // var http = require("http");
 
 class GroupMeBot {
   constructor(botID) {
     this.botID = botID;
-    // this.server = http.createServer(function (req, res) {
-    //   if (req.url == "/") {
-    //     //check the URL of the current request
-    //
-    //     // set response header
-    //     res.writeHead(200, { "Content-Type": "text/json" });
-    //
-    //     // set response content
-    //     res.write('{"PRETTY COOL": "WOW"}');
-    //     res.end();
-    //   }
-    //   // 2 - creating server
-    //
-    //   console.log(req, res);
-    // });
-    // this.server.listen(5000);
+    this.app = express();
+    this.app.get("/", (req, res) => {
+      res.send("Hey! this is the website for my Stock Bot");
+    });
+    this.app.post("/", jsonParser, (req, res) => {
+      var request = req.body;
+      if (request.sender_type != "bot") {
+        if (request.text.min.toLowerCase() == "!restart" || "!start") {
+          pm2.connect(() => {
+            pm2.restart("index");
+          });
+        }
+      }
+    });
+
+    this.app.listen(port, () => {
+      console.log("Bot Server Ready");
+    });
   }
 
   send(message) {

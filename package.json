@@ -4,7 +4,7 @@
   "description": "A ~OS bot to do HFT",
   "main": "index.js",
   "scripts": {
-    "test": "node test",
+    "test": "nodemon test.js",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
     "start": "pm2 start index.js --max-memory-restart 45M  -f",
@@ -22,8 +22,10 @@
   "homepage": "https://github.com/iconjone/StockBot#readme",
   "dependencies": {
     "asciichart": "^1.5.25",
+    "body-parser": "^1.19.0",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
+    "express": "^4.17.1",
     "http": "0.0.1-security",
     "kraken-api": "^1.0.1",
     "node-fetch": "^2.6.1",

@@ -82,6 +82,10 @@ function startTrading(overRideMode) {
         tradingSymbol = item[0].substring(1, item[0].length); //get tradingSymbol
         if (tradingSymbol == "XBT") tradingSymbol = "BTC";
         sellableVolume = parseFloat(item[1]);
+        if (sellableVolume < 0.02) {
+          mode = true;
+          foundSelling = false;
+        } // for low Balance
       } else if (!foundSelling) {
         tradingSymbol = "ETH";
         // crete function to determine best crypto to trade -> must make min_profit a calcualtable thingy
@@ -95,7 +99,7 @@ function startTrading(overRideMode) {
     // //force mode to be false for Selling Mode
     //mode = false;
     // //Force mode to be true for Buying Mode
-    //  mode = true;
+    //mode = true;
     //Force tradingSymbol for Selling or Buying
 
     if (mode) {
