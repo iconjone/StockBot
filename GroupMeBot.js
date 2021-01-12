@@ -26,7 +26,10 @@ class GroupMeBot {
           });
         } else if (request.text.toLowerCase() == "!update") {
           pm2.connect(() => {
-            pm2.start({ script: "update.bat" });
+            pm2.start({
+              script: "update.bat",
+              options: { interpreter: "none" }
+            });
           });
           this.send("Updating... Give it a second before you restart");
         } else if (request.text.toLowerCase() == "!status") {
@@ -50,13 +53,13 @@ class GroupMeBot {
   send(message) {
     let params = {
       bot_id: this.botID,
-      text: message.trim(),
+      text: message.trim()
     };
     params = JSON.stringify(params);
 
     fetch("https://api.groupme.com/v3/bots/post", {
       method: "POST",
-      body: params,
+      body: params
     });
   }
 }
