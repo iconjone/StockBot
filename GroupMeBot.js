@@ -29,6 +29,15 @@ class GroupMeBot {
             pm2.start({ script: "update.bat" });
           });
           this.send("Updating... Give it a second before you restart");
+        } else if (request.text.toLowerCase() == "!status") {
+          pm2.connect(() => {
+            pm2.describe("index", (err, description) => {
+              descriptionVal = description[0];
+              this.send(
+                `Status: ${descriptionVal.pm2_env.status} - Uptime: ${descriptionVal.pm2_env.pm_uptime}`
+              );
+            });
+          });
         }
       }
     });
