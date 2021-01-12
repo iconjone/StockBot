@@ -35,6 +35,8 @@ class GroupMeBot {
               );
             });
           });
+        } else if (request.text.toLowerCase() == "!help") {
+          this.send("Get !status, !restart or !update");
         } else if (request.text.toLowerCase() == "!update") {
           this.send("Updating... Restart will occur automatically");
           exec("update.bat", (error, stdout, stderr) => {
@@ -65,13 +67,13 @@ class GroupMeBot {
   send(message) {
     let params = {
       bot_id: this.botID,
-      text: message.trim()
+      text: message.trim(),
     };
     params = JSON.stringify(params);
 
     fetch("https://api.groupme.com/v3/bots/post", {
       method: "POST",
-      body: params
+      body: params,
     });
   }
 }
