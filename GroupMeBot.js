@@ -20,10 +20,15 @@ class GroupMeBot {
     this.app.post("/", jsonParser, (req, res) => {
       var request = req.body;
       if (request.sender_type != "bot") {
-        if (request.text.min.toLowerCase() == "!restart" || "!start") {
+        if (request.text.toLowerCase() == "!restart") {
           pm2.connect(() => {
             pm2.restart("index");
           });
+        } else if (request.text.toLowerCase() == "!update") {
+          pm2.connect(() => {
+            pm2.start({ script: "update.bat" });
+          });
+          this.send("Updating... Give it a second before you restart");
         }
       }
     });
