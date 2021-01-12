@@ -8,6 +8,8 @@ const fetch = require("node-fetch");
 
 const pm2 = require("pm2");
 
+const { exec } = require("child_process");
+
 // var http = require("http");
 
 class GroupMeBot {
@@ -24,22 +26,32 @@ class GroupMeBot {
           pm2.connect(() => {
             pm2.restart("index");
           });
-        } else if (request.text.toLowerCase() == "!update") {
-          pm2.connect(() => {
-            pm2.start({
-              script: "update.bat",
-              options: { interpreter: "none" }
-            });
-          });
-          this.send("Updating... Give it a second before you restart");
         } else if (request.text.toLowerCase() == "!status") {
           pm2.connect(() => {
             pm2.describe("index", (err, description) => {
-              descriptionVal = description[0];
+              var descriptionVal = description[0];
               this.send(
-                `Status: ${descriptionVal.pm2_env.status} - Uptime: ${descriptionVal.pm2_env.pm_uptime}`
+                `Status: ${descriptionVal.pm2_env.status} - Restarts: ${descriptionVal.pm2_env.restart_time} - Memory: ${descriptionVal.monit.memory} - CPU usage: ${descriptionVal.monit.cpu}%`
               );
             });
+          });
+        } else if (request.text.toLowerCase() == "!update") {
+          this.send("Updating... Restart will occur automatically");
+          exec("update.bat", (error, stdout, stderr) => {
+            if (error) {
+              console.log(`error: ${error.message}`);
+              this.send("Something failed");
+              return;
+            }
+            if (stderr) {
+              console.log(`stderr: ${stderr}`);
+              this.send("Update Succesful.. Restarting");
+              pm2.connect(() => {
+                pm2.restart("index");
+              });
+              return;
+            }
+            console.log(`stdout: ${stdout}`);
           });
         }
       }
