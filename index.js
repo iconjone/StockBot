@@ -7,6 +7,7 @@ const asciichart = require("asciichart");
 const KrakenRestClient = require("./KrakenRestClient");
 const KrakenWebSocketClient = require("./KrakenWebSocketClient");
 const GroupMeBot = require("./GroupMeBot");
+const StockServer = require("./StockServer");
 const helper = require("./helper");
 const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
@@ -39,6 +40,8 @@ let trade = [];
 
 pricesList = [];
 slopeList = [];
+
+server = new StockServer(bot, pricesList);
 
 //Algo 1 Idea
 //Get money balance(startTrading)

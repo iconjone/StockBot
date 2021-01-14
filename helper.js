@@ -1,3 +1,5 @@
+const ImageCharts = require("image-charts");
+
 fee = 0.0016;
 
 function buy(krakenWebSocket, pair, price, volume) {
@@ -102,6 +104,49 @@ function getA0(ohlcStore, period) {
   period5 = getSMA(ohlcStore, period * 1);
   return period5 - period35;
 }
+function generateChart(value) {
+  index = [...Array(value.length).keys()];
+
+  const chart = ImageCharts()
+    .cht("lxy")
+    .chd("t:" + index.join(",") + "|" + value.join(","))
+    .chxt("y")
+    .chxr("0," + (Math.min(...value) - 10) + "," + (Math.max(...value) + 10))
+    .chdlp("t")
+    .chm("s,000000,0,-1,5|s,000000,1,-1,5")
+    .chls("3")
+    .chof(".png")
+    .chs("999x200");
+
+  return chart.toURL();
+}
+
+function generateChartPoint(value, point) {
+  index = [...Array(value.length).keys()];
+  pointArr = Array(value.length).fill(point);
+
+  const chart = ImageCharts()
+    .cht("lxy")
+    .chd(
+      "t:" +
+        index.join(",") +
+        "|" +
+        value.join(",") +
+        "|" +
+        index.join(",") +
+        "|" +
+        pointArr.join(",")
+    )
+    .chxt("y")
+    .chxr("0," + (Math.min(...value) - 10) + "," + (Math.max(...value) + 10))
+    .chdlp("t")
+    .chm("s,000000,0,-1,5|s,000000,1,-1,5")
+    .chls("3|2,4,1")
+    .chof(".png")
+    .chs("999x200");
+
+  return chart.toURL();
+}
 
 module.exports = {
   buy,
@@ -112,4 +157,6 @@ module.exports = {
   getAverageLowSlopePrices,
   getAverageEndOfArray,
   getA0,
+  generateChart,
+  generateChartPoint,
 };
