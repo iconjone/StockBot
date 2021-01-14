@@ -1013,7 +1013,6 @@ app.post("/", jsonParser, (req, res) => {
         });
       });
     } else if (request.text.toLowerCase() == "!price") {
-      var pricesList = getPricesList();
       bot.send(`The current price is: $${pricesList[pricesList.length - 1]}`);
     } else if (request.text.toLowerCase() == "!help") {
       bot.send("Get !status, !restart, !price or !update");
