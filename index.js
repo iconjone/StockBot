@@ -1013,7 +1013,14 @@ app.post("/", jsonParser, (req, res) => {
         });
       });
     } else if (request.text.toLowerCase() == "!price") {
-      bot.send(`The current price is: $${pricesList[pricesList.length - 1]}`);
+      var text = `The current price is: $${pricesList[pricesList.length - 1]}`;
+      var image = helper.generateChart(
+        pricesList.slice(
+          pricesList.length <= 30 ? 0 : pricesList.length - 30,
+          pricesList.length
+        )
+      );
+      bot.sendImage(text, image);
     } else if (request.text.toLowerCase() == "!help") {
       bot.send("Get !status, !restart, !price or !update");
     } else if (request.text.toLowerCase() == "!update") {
