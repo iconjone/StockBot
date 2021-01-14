@@ -9,9 +9,8 @@ const pm2 = require("pm2");
 const { exec } = require("child_process");
 
 class StockServer {
-  constructor(GroupMeBot, pricesList) {
+  constructor(GroupMeBot) {
     this.bot = GroupMeBot;
-    this.pricesList = pricesList;
     this.app = express();
     this.app.get("/", (req, res) => {
       res.send("Hey! this is the website for my Stock Bot");
@@ -33,10 +32,9 @@ class StockServer {
             });
           });
         } else if (request.text.toLowerCase() == "!price") {
+          var pricesList = getPricesList();
           this.bot.send(
-            `The current price is: $${
-              this.pricesList[this.pricesList.length - 1]
-            }`
+            `The current price is: $${pricesList[pricesList.length - 1]}`
           );
         } else if (request.text.toLowerCase() == "!help") {
           this.bot.send("Get !status, !restart, !price or !update");

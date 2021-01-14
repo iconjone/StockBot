@@ -7,7 +7,7 @@ const asciichart = require("asciichart");
 const KrakenRestClient = require("./KrakenRestClient");
 const KrakenWebSocketClient = require("./KrakenWebSocketClient");
 const GroupMeBot = require("./GroupMeBot");
-const StockServer = require("./StockServer");
+
 const helper = require("./helper");
 const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
@@ -40,8 +40,6 @@ let trade = [];
 
 pricesList = [];
 slopeList = [];
-
-server = new StockServer(bot, pricesList);
 
 //Algo 1 Idea
 //Get money balance(startTrading)
@@ -985,3 +983,62 @@ function startTrading(overRideMode) {
     }
   });
 }
+
+const express = require("express");
+var bodyParser = require("body-parser");
+
+const port = process.env.PORT || 3000;
+var jsonParser = bodyParser.json();
+
+const { exec } = require("child_process");
+
+app = express();
+app.get("/", (req, res) => {
+  res.send("Hey! this is the website for my Stock Bot");
+});
+app.post("/", jsonParser, (req, res) => {
+  var request = req.body;
+  if (request.sender_type != "bot") {
+    if (request.text.toLowerCase() == "!restart") {
+      pm2.connect(() => {
+        pm2.restart("index");
+      });
+    } else if (request.text.toLowerCase() == "!status") {
+      pm2.connect(() => {
+        pm2.describe("index", (err, description) => {
+          var descriptionVal = description[0];
+          bot.send(
+            `Status: ${descriptionVal.pm2_env.status} - Restarts: ${descriptionVal.pm2_env.restart_time} - Memory: ${descriptionVal.monit.memory} - CPU usage: ${descriptionVal.monit.cpu}%`
+          );
+        });
+      });
+    } else if (request.text.toLowerCase() == "!price") {
+      var pricesList = getPricesList();
+      bot.send(`The current price is: $${pricesList[pricesList.length - 1]}`);
+    } else if (request.text.toLowerCase() == "!help") {
+      bot.send("Get !status, !restart, !price or !update");
+    } else if (request.text.toLowerCase() == "!update") {
+      bot.send("Updating... Restart will occur automatically");
+      exec("update.bat", (error, stdout, stderr) => {
+        if (error) {
+          console.log(`error: ${error.message}`);
+          bot.send("Something failed");
+          return;
+        }
+        if (stderr) {
+          console.log(`stderr: ${stderr}`);
+          bot.send("Update Succesful.. Restarting");
+          pm2.connect(() => {
+            pm2.restart("index");
+          });
+          return;
+        }
+        console.log(`stdout: ${stdout}`);
+      });
+    }
+  }
+});
+
+app.listen(port, () => {
+  console.log("Bot Server Ready");
+});
