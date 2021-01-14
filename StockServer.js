@@ -32,8 +32,14 @@ class StockServer {
               );
             });
           });
+        } else if (request.text.toLowerCase() == "!price") {
+          this.bot.send(
+            `The current price is: $${
+              this.pricesList[this.pricesList.length - 1]
+            }`
+          );
         } else if (request.text.toLowerCase() == "!help") {
-          this.bot.send("Get !status, !restart or !update");
+          this.bot.send("Get !status, !restart, !price or !update");
         } else if (request.text.toLowerCase() == "!update") {
           this.bot.send("Updating... Restart will occur automatically");
           exec("update.bat", (error, stdout, stderr) => {
