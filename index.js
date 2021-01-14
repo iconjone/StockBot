@@ -680,7 +680,13 @@ function startTrading(overRideMode) {
               pricesList[pricesList.length - 1]
             }`;
 
-            image = helper.generateChartPoint(pricesList, wantedPrice);
+            image = helper.generateChartPoint(
+              pricesList.slice(
+                pricesList.length <= 30 ? 0 : pricesList.length - 30,
+                pricesList.length
+              ),
+              parseInt(wantedPrice)
+            );
 
             bot.sendImage(text, image);
 
