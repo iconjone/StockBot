@@ -672,14 +672,15 @@ function startTrading(overRideMode) {
                 (lows.reduce((a, b) => a + b, 0) / lows.length) * 0.25
               );
 
-            bot.send(
+            bot.sendImage(
               `Bought at: ${priceBought} | Breakeven Price: ${wantedPrice} | Estimated Sell Price: $${riseStart} | Estimated Jump $${
                 riseStart - priceBought
               } | Estimated Profit ${
                 sellableVolume * (riseStart - priceBought)
               } - Volume: ${sellableVolume}${tradingSymbol} - Current Price: ${
                 pricesList[pricesList.length - 1]
-              }`
+              }`,
+              helper.generateChartPoint(pricesList, wantedPrice)
             );
 
             //Start reading the Wewsocket connections

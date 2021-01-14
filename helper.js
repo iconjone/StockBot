@@ -138,7 +138,12 @@ function generateChartPoint(value, point) {
         pointArr.join(",")
     )
     .chxt("y")
-    .chxr("0," + (Math.min(...value) - 10) + "," + (Math.max(...value) + 10))
+    .chxr(
+      "0," +
+        (Math.min(Math.min(...value), point) - 10) +
+        "," +
+        (Math.max(Math.max(...value), point) + 10)
+    )
     .chdlp("t")
     .chm("s,000000,0,-1,5|s,000000,1,-1,5")
     .chls("3|2,4,1")
