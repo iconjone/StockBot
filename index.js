@@ -842,7 +842,7 @@ function startTrading(overRideMode) {
                     parseFloat(data[1].a[0]) >=
                       parseFloat(wantedPrice) +
                         parseFloat(process.env.MIN_PROFIT),
-                    watchingAO[watchingAO.length - 1] >= 1.5,
+                    watchingAO[watchingAO.length - 1] >= 0.75,
                     watchingSlope.length > 35,
                     !sold,
                     "Must be all true"
@@ -855,6 +855,7 @@ function startTrading(overRideMode) {
                   parseFloat(data[1].a[0]) >=
                     parseFloat(wantedPrice) +
                       parseFloat(process.env.MIN_PROFIT) &&
+                  watchingAO[watchingAO.length - 1] >= 0.75 &&
                   watchingSlope.length > 35 &&
                   !sold
                 ) {
@@ -878,11 +879,11 @@ function startTrading(overRideMode) {
                     "SOLD AT $" +
                       soldValue +
                       " Equalizer: $" +
-                      helper.getBuyRateEqualizer(
-                        parseFloat(soldValue) +
-                          " Profit: $" +
-                          (soldValue - priceBought) * sellableVolume
-                      )
+                      helper.getBuyRateEqualizer(parseFloat(soldValue)) +
+                      " Profit: $" +
+                      (soldValue - priceBought) * sellableVolume +
+                      "AO: " +
+                      watchingAO[watchingAO.length - 1]
                   );
                   trade.push({
                     type: "sell",
