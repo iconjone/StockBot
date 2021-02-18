@@ -275,8 +275,7 @@ function startTrading(overRideMode) {
                   );
                   bot.send(
                     `New Reccomended Max Buy Rate: $${dropStart} | Current Price: $${
-                      watchingPrice[watchingPrice.length - 1]
-                    }`
+                      watchingPrice[watchingPrice.length - 1]}  | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${watchingAOBig[watchingAOBig.length - 1]}`              
                   );
                 }
               }
@@ -743,13 +742,12 @@ function startTrading(overRideMode) {
                     riseStart = newStart;
                     if (process.env.NODE_ENV == "development")
                       console.log(
-                        "New Reccomended Minumum Buy Rate:",
+                        "New Reccomended Minumum Sell Rate:",
                         chalk.bgMagenta(riseStart)
                       );
                     bot.send(
-                      `New Reccomended Min Buy Rate: $${riseStart} | Current Price: $${
-                        watchingPrice[watchingPrice.length - 1]
-                      }`
+                      `New Reccomended Min Sell Rate: $${riseStart} | Current Price: $${
+                        watchingPrice[watchingPrice.length - 1]} | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${watchingAOBig[watchingAOBig.length - 1]}`
                     );
                   }
                 }
@@ -983,7 +981,7 @@ function startTrading(overRideMode) {
 const express = require("express");
 var bodyParser = require("body-parser");
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3546;
 var jsonParser = bodyParser.json();
 
 const { exec } = require("child_process");
