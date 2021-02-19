@@ -275,7 +275,10 @@ function startTrading(overRideMode) {
                   );
                   bot.send(
                     `New Reccomended Max Buy Rate: $${dropStart} | Current Price: $${
-                      watchingPrice[watchingPrice.length - 1]}  | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${watchingAOBig[watchingAOBig.length - 1]}`              
+                      watchingPrice[watchingPrice.length - 1]
+                    }  | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${
+                      watchingAOBig[watchingAOBig.length - 1]
+                    }`
                   );
                 }
               }
@@ -414,8 +417,8 @@ function startTrading(overRideMode) {
               ) {
                 bought = true;
                 boughtValue = (
-                  parseFloat(data[1].b[0]) * 0.75 +
-                  watchingPrice[watchingPrice.length - 1] * 0.25
+                  parseFloat(data[1].b[0]) * 0.6 +
+                  watchingPrice[watchingPrice.length - 1] * 0.4
                 ).toFixed(2);
                 console.log(
                   chalk.bgCyan("BUY AT") +
@@ -497,7 +500,7 @@ function startTrading(overRideMode) {
                                   });
                               }
                           });
-                      }, 25000);
+                      }, 45000);
                     }
                   }
                 }
@@ -747,7 +750,10 @@ function startTrading(overRideMode) {
                       );
                     bot.send(
                       `New Reccomended Min Sell Rate: $${riseStart} | Current Price: $${
-                        watchingPrice[watchingPrice.length - 1]} | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${watchingAOBig[watchingAOBig.length - 1]}`
+                        watchingPrice[watchingPrice.length - 1]
+                      } | AO: ${watchingAO[watchingAO.length - 1]} | BIG AO: ${
+                        watchingAOBig[watchingAOBig.length - 1]
+                      }`
                     );
                   }
                 }
