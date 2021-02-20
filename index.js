@@ -34,6 +34,12 @@ if (process.env.NODE_ENV != "development")
 
 mode = true; // If mode is true, we are in buy mode, else if it is in false we are in sell mode - set to true as default
 
+if (process.env.NODE_ENV == "development"){
+  process.env.LIVE = 0
+}
+
+
+
 //Testing for watching trade
 
 let trade = [];
@@ -846,7 +852,7 @@ function startTrading(overRideMode) {
                     parseFloat(data[1].a[0]) >=
                       parseFloat(wantedPrice) +
                         parseFloat(process.env.MIN_PROFIT),
-                    watchingAO[watchingAO.length - 1] >= 0.75,
+                    watchingAO[watchingAO.length - 1] >= 1.5,
                     watchingSlope.length > 35,
                     !sold,
                     "Must be all true"
@@ -859,7 +865,7 @@ function startTrading(overRideMode) {
                   parseFloat(data[1].a[0]) >=
                     parseFloat(wantedPrice) +
                       parseFloat(process.env.MIN_PROFIT) &&
-                  watchingAO[watchingAO.length - 1] >= 0.75 &&
+                  watchingAO[watchingAO.length - 1] >= 1.5 &&
                   watchingSlope.length > 35 &&
                   !sold
                 ) {
@@ -886,7 +892,7 @@ function startTrading(overRideMode) {
                       helper.getBuyRateEqualizer(parseFloat(soldValue)) +
                       " Profit: $" +
                       (soldValue - priceBought) * sellableVolume +
-                      "AO: " +
+                      " AO: " +
                       watchingAO[watchingAO.length - 1]
                   );
                   trade.push({
@@ -987,7 +993,7 @@ function startTrading(overRideMode) {
 const express = require("express");
 var bodyParser = require("body-parser");
 
-const port = process.env.PORT || 3546;
+const port = process.env.PORT || 3000;
 var jsonParser = bodyParser.json();
 
 const { exec } = require("child_process");
