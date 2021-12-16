@@ -22,17 +22,22 @@
   },
   "homepage": "https://github.com/iconjone/StockBot#readme",
   "dependencies": {
+    "@tensorflow/tfjs-node": "^3.11.0",
     "asciichart": "^1.5.25",
     "body-parser": "^1.19.0",
+    "brain.js": "^2.0.0-beta.4",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "http": "0.0.1-security",
     "image-charts": "^5.6.17",
     "kraken-api": "^1.0.1",
+    "minmaxscaler": "^1.0.1",
     "node-fetch": "^2.6.1",
+    "nodeplotlib": "^0.7.6",
     "plotly": "^1.0.6",
     "pm2": "^4.5.1",
+    "taira": "^3.2.1",
     "ws": "^7.4.1"
   },
   "devDependencies": {
