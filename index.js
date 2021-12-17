@@ -6,12 +6,15 @@ const websocketServer = require('./websocketServer');
 dataCollector.collectData('ETH');
 
 dataCollector.emitter.on('tickerClose', (data) => {
+  console.log("there's data", data);
   websocketServer.wss.broadcast({ tickerClose: data });
 });
 
 websocketServer.emitter.on('request', async (request) => {
-  const data = await dataCollector.getPricesData(request.tradingSymbol, request.interval);
-  websocketServer.emitter.emit('requestResponse', data);
+  if (request.type === 'ticker') {
+    const data = await dataCollector.getPricesData(request.tradingSymbol, request.interval);
+    websocketServer.emitter.emit('requestResponse', data);
+  }
 });
 
 // setting middleware

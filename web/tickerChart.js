@@ -7,7 +7,7 @@ const ws = new WebSocket('ws://localhost:8080');
 console.log(ws);
 ws.onopen = function onOpen() {
   console.log('Connected to server');
-  ws.send(JSON.stringify({ request: { tradingSymbol: 'ETH', interval: 1 } }));
+  ws.send(JSON.stringify({ request: { type: 'ticker', tradingSymbol: 'ETH', interval: 1 } }));
 };
 
 let cnt = 149;
@@ -19,8 +19,14 @@ ws.onmessage = function onMessage(evt) {
   console.log(data);
   if (data.requestResponse !== undefined) {
     Plotly.newPlot('ticker', [{
-      y: data.requestResponse.data.slice(720 - 150),
+      y: data.requestResponse.prices.slice(720 - 150),
       type: 'line',
+      name: 'Ticker Close Prices',
+    },
+    {
+      y: Array(150).fill(data.requestResponse.limit),
+      type: 'line',
+      name: 'Limit',
     }], {
       title: 'Ticker Chart',
       xaxis: {
@@ -29,12 +35,18 @@ ws.onmessage = function onMessage(evt) {
       },
       yaxis: {
         title: 'Price',
-        range: [Math.min(...data.requestResponse.data.slice(720 - 150)) - 20,
-          Math.max(...data.requestResponse.data.slice(720 - 150)) + 20],
+
+      },
+      paper_bgcolor: '#161f27',
+      plot_bgcolor: '#161f27',
+      font: {
+        color: '#dbdbdb',
       },
     });
   } else {
     Plotly.extendTraces('ticker', { y: [[data.tickerClose]] }, [0]);
+    Plotly.extendTraces('ticker', { y: [[4150]] }, [1]);
+
     cnt += 1;
     if (cnt > 150) {
       Plotly.relayout('ticker', {

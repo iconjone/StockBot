@@ -27,7 +27,7 @@ wss.on('connection', (ws) => {
     if (clientMessage.request !== undefined) {
       emitter.emit('request', clientMessage.request);
       emitter.once('requestResponse', (data) => {
-        ws.send(JSON.stringify({ requestResponse: { data } }));
+        ws.send(JSON.stringify({ requestResponse: { prices: data, limit: 4000 } }));
       });
     }
     // console.log(message);
