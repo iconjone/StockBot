@@ -1,39 +1,46 @@
-require("dotenv").config();
-const KrakenRestClient = require("./kraken/KrakenRestClient");
-const KrakenWebSocketClient = require("./kraken/KrakenWebSocketClient");
+require('dotenv').config();
+const { EventEmitter } = require('events');
+
+const KrakenRestClient = require('./kraken/KrakenRestClient');
+const KrakenWebSocketClient = require('./kraken/KrakenWebSocketClient');
+
 const key = process.env.KEY; // API Key
 const secret = process.env.SECRET; // API Private Key
-const EventEmitter = require('events').EventEmitter;
+
 const emitter = new EventEmitter();
 
-let krakenRest = new KrakenRestClient(key, secret);
-let krakenWebSocket = new KrakenWebSocketClient(key, secret);
-
-tradingSymbol = "ETH";
-
+const krakenRest = new KrakenRestClient(key, secret);
+const krakenWebSocket = new KrakenWebSocketClient(key, secret);
 
 function collectData(tradingSymbol) {
+  krakenWebSocket.api('subscribe', 'ohlc', [`${tradingSymbol}/USD`]); // Subscribe to ohlc
+  krakenWebSocket.api('subscribe', 'ticker', [`${tradingSymbol}/USD`]); // Subscribe to ticker
 
-    krakenWebSocket.api("subscribe", "ohlc", [`${tradingSymbol}/USD`]); //Subscribe to ohlc
-    krakenWebSocket.api("subscribe", "ticker", [`${tradingSymbol}/USD`]); //Subscribe to ticker
+  krakenWebSocket.ws.on('message', (data) => {
+    const messageData = JSON.parse(data);
 
-    krakenWebSocket.ws.on("message", data => {
-        data = JSON.parse(data);
+    // console.log(data);
+    if (messageData.event === undefined) {
+      // console.log(data[2])
+      if (messageData[2].includes('ticker')) {
+        emitter.emit('tickerClose', messageData[1].c[0]);
 
-        // console.log(data);
-        if(data.event == undefined){
-            // console.log(data[2])
-            if(data[2].includes("ticker")){
-            emitter.emit('tickerClose', data[1].c[0]);
-
-                // console.log(data[1].c[0]);
-            }
-        }
-
-    })
-
+        // console.log(data[1].c[0]);
+      }
+    }
+  });
 }
 
-// collectData(tradingSymbol);
+async function getPricesData(tradingSymbol, interval) {
+  const data = await krakenRest.api('OHLC', { pair: `${tradingSymbol}/USD`, interval });
+  if (data.result[`${tradingSymbol}/USD`] === undefined) {
+    // console.log('Error - trying again');
 
-module.exports = { collectData, emitter };
+    return getPricesData(tradingSymbol, interval);
+  }
+
+  // console.log(data.result[`${tradingSymbol}/USD`].map(item=>{return parseFloat(item[4])}));
+  return data.result[`${tradingSymbol}/USD`].map((item) => parseFloat(item[4]));
+}
+
+module.exports = { collectData, emitter, getPricesData };

@@ -1,14 +1,14 @@
-const express = require("express");
-var bodyParser = require("body-parser");
+const express = require('express');
+const bodyParser = require('body-parser');
 
 const port = process.env.PORT || 3000;
-var jsonParser = bodyParser.json();
+const jsonParser = bodyParser.json();
 
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
 
-const pm2 = require("pm2");
+const pm2 = require('pm2');
 
-const { exec } = require("child_process");
+const { exec } = require('child_process');
 
 // var http = require("http");
 
@@ -24,26 +24,27 @@ class GroupMeBot {
     };
     params = JSON.stringify(params);
 
-    fetch("https://api.groupme.com/v3/bots/post", {
-      method: "POST",
+    fetch('https://api.groupme.com/v3/bots/post', {
+      method: 'POST',
       body: params,
     });
   }
+
   sendImage(message, image) {
     let params = {
       bot_id: this.botID,
       text: message.trim(),
       attachments: [
         {
-          type: "image",
+          type: 'image',
           url: image,
         },
       ],
     };
     params = JSON.stringify(params);
 
-    fetch("https://api.groupme.com/v3/bots/post", {
-      method: "POST",
+    fetch('https://api.groupme.com/v3/bots/post', {
+      method: 'POST',
       body: params,
     });
   }

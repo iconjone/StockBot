@@ -2,51 +2,14 @@
     <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <script src="https://cdn.plot.ly/plotly-2.6.3.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="styles.css">
     </head>
     <body>
     <div class="navbar"><span>CryptoBot - JS</span></div>
     <div class="wrapper">
 
-        <div id="chart"></div>
-        <script>
-
-
-            console.log(Plotly)
-
-            Plotly.newPlot('chart',[{
-                y:[],
-                type:'line'
-            }]);
-            
-            var cnt = 0;
-
-            //Connect to websocket server
-            var ws = new WebSocket("ws://localhost:8080");
-            //On message
-            ws.onmessage = function(evt) {
-                console.log(evt.data)
-                var data = JSON.parse(evt.data);
-                console.log(data);
-
-
-                Plotly.extendTraces('chart',{ y:[[data]]}, [0]);
-                cnt++;
-                if(cnt > 20) {
-                    Plotly.relayout('chart',{
-                        xaxis: {
-                            range: [cnt-20,cnt]
-                        }
-                    });
-                }
-
-
-
-            };
-
-
-
-        </script>
+        <div id="ticker"></div>
+        <!-- Add tickerChart.js-->
+        <script src="tickerChart.js"></script>
     </div>
     </body>
 </html>

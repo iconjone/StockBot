@@ -9,7 +9,8 @@
     "train": "nodemon trainModel.js",
     "start": "pm2 start index.js --max-memory-restart 45M  -f",
     "stop": "pm2 delete all",
-    "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M --exp-backoff-restart-delay=100 -f"
+    "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M --exp-backoff-restart-delay=100 -f",
+    "lint": "eslint . --fix"
   },
   "repository": {
     "type": "git",
@@ -43,6 +44,9 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "eslint": "^8.4.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.3",
     "nodemon": "^2.0.6"
   }
 }

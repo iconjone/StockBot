@@ -1,23 +1,23 @@
-const ImageCharts = require("image-charts");
+const ImageCharts = require('image-charts');
 
 fee = 0.0016;
 
 function buy(krakenWebSocket, pair, price, volume) {
-  krakenWebSocket.api("addOrder", "addOrder", [pair], {
-    ordertype: "limit",
-    type: "buy",
-    price: price,
-    volume: volume,
-    oflags: "fcib,post",
+  krakenWebSocket.api('addOrder', 'addOrder', [pair], {
+    ordertype: 'limit',
+    type: 'buy',
+    price,
+    volume,
+    oflags: 'fcib,post',
   });
 }
 function sell(krakenWebSocket, pair, price, volume) {
-  krakenWebSocket.api("addOrder", "addOrder", [pair], {
-    ordertype: "limit",
-    type: "sell",
-    price: price,
-    volume: volume,
-    oflags: "fciq,post",
+  krakenWebSocket.api('addOrder', 'addOrder', [pair], {
+    ordertype: 'limit',
+    type: 'sell',
+    price,
+    volume,
+    oflags: 'fciq,post',
   });
 }
 
@@ -30,34 +30,32 @@ function sellingEstimatorsOHLC(prices, open, close, low, high) {
 
   slope = high;
   priceSlope = [];
-  slope.map((ele, index) => {
-    return ele - low[index];
-  });
+  slope.map((ele, index) => ele - low[index]);
   console.log(price, open, close, low, high);
   console.log(
     asciichart.plot(prices, {
       colors: [asciichart.cyan],
-    })
+    }),
   );
-  console.log("-------------------");
+  console.log('-------------------');
   console.log(
     asciichart.plot(slope, {
       colors: [asciichart.magenta],
-    })
+    }),
   );
-  console.log("-------------------");
+  console.log('-------------------');
   console.log(
     asciichart.plot(low, {
       colors: [asciichart.red],
-    })
+    }),
   );
-  console.log("-------------------");
+  console.log('-------------------');
   console.log(
     asciichart.plot(high, {
       colors: [asciichart.green],
-    })
+    }),
   );
-  console.log("-------------------");
+  console.log('-------------------');
 }
 
 function getSellRateEqualizer(input) {
@@ -71,8 +69,7 @@ function getBuyRateEqualizer(input) {
 function getAverageHighSlopePrices(ohlc) {
   highs = [];
   ohlc.forEach((item, i) => {
-    if (item[5] && item[2] && parseFloat(item[5] - item[2]) > 0)
-      highs.push(parseFloat(item[3]));
+    if (item[5] && item[2] && parseFloat(item[5] - item[2]) > 0) highs.push(parseFloat(item[3]));
   });
   return highs.reduce((a, b) => a + b, 0) / highs.length;
 }
@@ -80,8 +77,7 @@ function getAverageHighSlopePrices(ohlc) {
 function getAverageLowSlopePrices(ohlc) {
   lows = [];
   ohlc.forEach((item, i) => {
-    if (item[5] && item[2] && parseFloat(item[5] - item[2]) < 0)
-      lows.push(parseFloat(item[4]));
+    if (item[5] && item[2] && parseFloat(item[5] - item[2]) < 0) lows.push(parseFloat(item[4]));
   });
   return lows.reduce((a, b) => a + b, 0) / lows.length;
 }
@@ -108,15 +104,15 @@ function generateChart(value) {
   index = [...Array(value.length).keys()];
 
   const chart = ImageCharts()
-    .cht("lxy")
-    .chd("t:" + index.join(",") + "|" + value.join(","))
-    .chxt("y")
-    .chxr("0," + (Math.min(...value) - 10) + "," + (Math.max(...value) + 10))
-    .chdlp("t")
-    .chm("s,000000,0,-1,5|s,000000,1,-1,5")
-    .chls("3")
-    .chof(".png")
-    .chs("999x200");
+    .cht('lxy')
+    .chd(`t:${index.join(',')}|${value.join(',')}`)
+    .chxt('y')
+    .chxr(`0,${Math.min(...value) - 10},${Math.max(...value) + 10}`)
+    .chdlp('t')
+    .chm('s,000000,0,-1,5|s,000000,1,-1,5')
+    .chls('3')
+    .chof('.png')
+    .chs('999x200');
 
   return chart.toURL();
 }
@@ -126,29 +122,29 @@ function generateChartPoint(value, point) {
   pointArr = Array(value.length).fill(point);
 
   const chart = ImageCharts()
-    .cht("lxy")
+    .cht('lxy')
     .chd(
-      "t:" +
-        index.join(",") +
-        "|" +
-        value.join(",") +
-        "|" +
-        index.join(",") +
-        "|" +
-        pointArr.join(",")
+      `t:${
+        index.join(',')
+      }|${
+        value.join(',')
+      }|${
+        index.join(',')
+      }|${
+        pointArr.join(',')}`,
     )
-    .chxt("y")
+    .chxt('y')
     .chxr(
-      "0," +
-        (Math.min(Math.min(...value), point) - 10) +
-        "," +
-        (Math.max(Math.max(...value), point) + 10)
+      `0,${
+        Math.min(Math.min(...value), point) - 10
+      },${
+        Math.max(Math.max(...value), point) + 10}`,
     )
-    .chdlp("t")
-    .chm("s,000000,0,-1,5|s,000000,1,-1,5")
-    .chls("3|2,4,1")
-    .chof(".png")
-    .chs("999x200");
+    .chdlp('t')
+    .chm('s,000000,0,-1,5|s,000000,1,-1,5')
+    .chls('3|2,4,1')
+    .chof('.png')
+    .chs('999x200');
 
   return chart.toURL();
 }
