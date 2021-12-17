@@ -6,7 +6,7 @@ const websocketServer = require('./websocketServer');
 dataCollector.collectData('ETH');
 
 dataCollector.emitter.on('tickerClose', (data) => {
-  console.log("there's data", data);
+  // console.log("there's data", data);
   websocketServer.wss.broadcast({ tickerClose: data });
 });
 
@@ -16,6 +16,10 @@ websocketServer.emitter.on('request', async (request) => {
     websocketServer.emitter.emit('requestResponse', data);
   }
 });
+
+setTimeout(() => {
+  websocketServer.wss.broadcast({ limit: 3950 });
+}, 4 * 60 * 1000);
 
 // setting middleware
 const app = express();

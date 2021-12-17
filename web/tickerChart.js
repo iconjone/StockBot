@@ -10,7 +10,8 @@ ws.onopen = function onOpen() {
   ws.send(JSON.stringify({ request: { type: 'ticker', tradingSymbol: 'ETH', interval: 1 } }));
 };
 
-let cnt = 149;
+let tickerData = [];
+let limit = 0;
 
 // On message
 ws.onmessage = function onMessage(evt) {
@@ -18,8 +19,10 @@ ws.onmessage = function onMessage(evt) {
   const data = JSON.parse(evt.data);
   console.log(data);
   if (data.requestResponse !== undefined) {
+    limit = data.requestResponse.limit;
+    tickerData = data.requestResponse.prices.slice(720-150);
     Plotly.newPlot('ticker', [{
-      y: data.requestResponse.prices.slice(720 - 150),
+      y: tickerData,
       type: 'line',
       name: 'Ticker Close Prices',
     },
@@ -30,7 +33,6 @@ ws.onmessage = function onMessage(evt) {
     }], {
       title: 'Ticker Chart',
       xaxis: {
-        range: [cnt - 150, cnt],
         title: 'Time',
       },
       yaxis: {
@@ -43,9 +45,9 @@ ws.onmessage = function onMessage(evt) {
         color: '#dbdbdb',
       },
     });
-  } else {
+  } else if (data.tickerClose !== undefined) {
     Plotly.extendTraces('ticker', { y: [[data.tickerClose]] }, [0]);
-    Plotly.extendTraces('ticker', { y: [[4150]] }, [1]);
+    Plotly.extendTraces('ticker', { y: [[limit]] }, [1]);
 
     cnt += 1;
     if (cnt > 150) {
@@ -55,5 +57,13 @@ ws.onmessage = function onMessage(evt) {
         },
       }, { title: 'Ticker Chart' });
     }
+  } else if (data.limit !== undefined) {
+    limit = data.limit;
+    Plotly.deleteTraces('ticker', [1]);
+    Plotly.addTraces('ticker', {
+      y: Array(150).fill(data.limit),
+      type: 'line',
+      name: 'Limit',
+    });
   }
 };
