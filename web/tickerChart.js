@@ -12,6 +12,14 @@ ws.onopen = function onOpen() {
       request: { type: 'ticker', interval: 5 },
     }),
   );
+
+  // keep websocket alive, send ping every 5 minutes
+  setInterval(
+    () => {
+      ws.send(JSON.stringify({ ping: true }));
+    },
+    5 * 60 * 1000,
+  );
 };
 
 let breakEven = 0;
@@ -35,9 +43,9 @@ ws.onmessage = function onMessage(evt) {
       mode = data.requestResponse.ticker.mode;
       modeText.innerHTML = `Mode: ${mode.toUpperCase()}`;
 
-      const tickerData = data.requestResponse.ticker.prices.slice(720 - 150);
+      const tickerData = data.requestResponse.ticker.prices.slice(720 - 200);
       limit = 0;
-      cnt = 150;
+      cnt = 200;
       Plotly.newPlot(
         ticker,
         [
@@ -51,6 +59,7 @@ ws.onmessage = function onMessage(evt) {
           title: 'Ticker Chart',
           xaxis: {
             title: 'Time',
+            dtick: 25,
           },
           yaxis: {
             title: 'Price',
@@ -67,7 +76,7 @@ ws.onmessage = function onMessage(evt) {
         profitText.innerHTML = `Real Time Profit: ~$${((data.requestResponse.ticker.prices[719] - breakEven) * amount).toFixed(2)}`;
 
         Plotly.addTraces(ticker, {
-          y: Array(150).fill(breakEven),
+          y: Array(200).fill(breakEven),
           type: 'line',
           name: `Break Even Price <br>$${breakEven.toFixed(2)}`,
         });
@@ -87,10 +96,12 @@ ws.onmessage = function onMessage(evt) {
     Plotly.extendTraces(ticker, { y: [[newTicker]] }, [0]);
 
     cnt += 1;
-    if (cnt > 150) {
+    if (cnt > 200) {
       Plotly.relayout(ticker, {
         xaxis: {
-          range: [cnt - 150, cnt],
+          range: [cnt - 200, cnt],
+          title: 'Time',
+          dtick: 25,
         },
         title: `Ticker Chart - $${newTicker.toFixed(2)}`,
       });
