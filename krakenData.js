@@ -83,11 +83,11 @@ async function getLastTrade(tradingSymbol, offset = 0) {
     ) {
       return {
         ordertype: data.result.closed[closeKey].descr.ordertype,
-        price: data.result.closed[closeKey].price,
-        amount: data.result.closed[closeKey].vol_exec,
+        price: parseFloat(data.result.closed[closeKey].price),
+        amount: parseFloat(data.result.closed[closeKey].vol_exec),
         time: data.result.closed[closeKey].closetm,
-        fee: data.result.closed[closeKey].fee,
-        cost: data.result.closed[closeKey].cost, // total cost is cost + fee
+        fee: parseFloat(data.result.closed[closeKey].fee),
+        cost: parseFloat(data.result.closed[closeKey].cost), // total cost is cost + fee
       };
     }
   }

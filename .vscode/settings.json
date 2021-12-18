@@ -3,5 +3,9 @@
         "activityBar.background": "#292e06",
         "titleBar.activeBackground": "#05af0e2f",
         "titleBar.activeForeground": "#FAFBF0"
-    }
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "eslint.validate": ["javascript"]
 }
