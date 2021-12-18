@@ -5,7 +5,6 @@ const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
 const orderCalculator = require('./orderCalculator');
 
-let limit = 0;
 const tradingSymbol = 'ETH';
 
 function startEmitters() {
@@ -17,7 +16,15 @@ function startEmitters() {
   websocketServer.emitter.on('request', async (request) => {
     if (request.type === 'ticker') {
       const data = await krakenData.getPricesData(tradingSymbol, request.interval);
-      websocketServer.emitter.emit('requestResponse', { prices: data, limit });
+      const breakEven = await orderCalculator.calculateBreakEvenBeforeSell(tradingSymbol);
+      const mode = await orderCalculator.determineMode(tradingSymbol);
+      let lastTrade;
+      if (mode === 'sell') {
+        lastTrade = await krakenData.getLastTrade(tradingSymbol);
+      }
+      websocketServer.emitter.emit('requestResponse', {
+        prices: data, breakEven, mode, lastTrade,
+      });
     }
   });
 
@@ -47,6 +54,10 @@ async function start() {
   startEmitters();
   startWebServer();
 
-  limit = await orderCalculator.calculateBreakEvenBeforeSell(tradingSymbol);
+  // after 1 minute send a limit
+  setTimeout(() => {
+    console.log('Sending limit');
+    websocketServer.wss.broadcast({ limit: 4000 });
+  }, 6000);
 }
 start();
