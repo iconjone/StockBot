@@ -1,26 +1,22 @@
 // import data collector
 const express = require('express');
-const dataCollector = require('./dataCollector');
+const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
 
-dataCollector.collectData('ETH');
+krakenData.collectData('ETH');
 
-dataCollector.emitter.on('tickerClose', (data) => {
+krakenData.emitter.on('tickerClose', (data) => {
   // console.log("there's data", data);
   websocketServer.wss.broadcast({ tickerClose: data });
 });
+const limit = 3950;
 
 websocketServer.emitter.on('request', async (request) => {
   if (request.type === 'ticker') {
-    const data = await dataCollector.getPricesData(request.tradingSymbol, request.interval);
-    websocketServer.emitter.emit('requestResponse', data);
+    const data = await krakenData.getPricesData(request.tradingSymbol, request.interval);
+    websocketServer.emitter.emit('requestResponse', { prices: data, limit });
   }
 });
-
-//Testing limit moving
-setTimeout(() => {
-  websocketServer.wss.broadcast({ limit: 3950 });
-}, 1 * 60 * 1000);
 
 // setting middleware
 const app = express();
