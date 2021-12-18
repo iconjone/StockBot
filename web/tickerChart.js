@@ -34,14 +34,10 @@ ws.onmessage = function onMessage(evt) {
       breakEven = data.requestResponse.ticker.breakEven;
       mode = data.requestResponse.ticker.mode;
       modeText.innerHTML = `Mode: ${mode.toUpperCase()}`;
-      if (mode === 'sell') {
-        console.log(data.requestResponse.ticker.lastTrade);
-        amount = data.requestResponse.ticker.lastTrade.amount;
-      }
-      profitText.innerHTML = `Real Time Profit: ~$${((data.requestResponse.ticker.prices[719] - breakEven) * amount).toFixed(2)}`;
+
       const tickerData = data.requestResponse.ticker.prices.slice(720 - 150);
       limit = 0;
-      cnt = 149;
+      cnt = 150;
       Plotly.newPlot(
         ticker,
         [
@@ -49,11 +45,6 @@ ws.onmessage = function onMessage(evt) {
             y: tickerData,
             type: 'line',
             name: 'Ticker Close Prices',
-          },
-          {
-            y: Array(150).fill(breakEven),
-            type: 'line',
-            name: `Break Even Price <br>$${breakEven.toFixed(2)}`,
           },
         ],
         {
@@ -71,17 +62,29 @@ ws.onmessage = function onMessage(evt) {
           },
         },
       );
+      if (mode === 'sell') {
+        amount = data.requestResponse.ticker.lastTrade.amount;
+        profitText.innerHTML = `Real Time Profit: ~$${((data.requestResponse.ticker.prices[719] - breakEven) * amount).toFixed(2)}`;
+
+        Plotly.addTraces(ticker, {
+          y: Array(150).fill(breakEven),
+          type: 'line',
+          name: `Break Even Price <br>$${breakEven.toFixed(2)}`,
+        });
+      }
     }
   } else if (data.tickerClose !== undefined) {
     const newTicker = parseFloat(data.tickerClose);
     if (mode === 'sell') {
       profitText.innerHTML = `Real Time Profit: ~$${((newTicker - breakEven) * amount).toFixed(2)}`;
+      Plotly.extendTraces(ticker, { y: [[breakEven]] }, [1]);
+      if (limit !== 0) {
+        Plotly.extendTraces(ticker, { y: [[limit]] }, [2]);
+      }
+    } else if (limit !== 0) { // if mode is buy and limit has been set
+      Plotly.extendTraces(ticker, { y: [[limit]] }, [1]);
     }
     Plotly.extendTraces(ticker, { y: [[newTicker]] }, [0]);
-    Plotly.extendTraces(ticker, { y: [[breakEven]] }, [1]);
-    if (limit !== 0) {
-      Plotly.extendTraces(ticker, { y: [[limit]] }, [2]);
-    }
 
     cnt += 1;
     if (cnt > 150) {
@@ -93,14 +96,23 @@ ws.onmessage = function onMessage(evt) {
       });
     }
   } else if (data.limit !== undefined) {
+    traceNum = data.limit.type === 'buy' ? 1 : 2;
     if (limit !== 0) {
-      Plotly.deleteTraces(ticker, [1]);
+      Plotly.deleteTraces(ticker, [traceNum]);
     }
     limit = parseFloat(data.limit);
-    Plotly.addTraces(ticker, {
-      y: Array(cnt).fill(limit),
-      type: 'line',
-      name: `Limit Price<br>$${limit.toFixed(2)}<br>Profit: ~$${((limit - breakEven) * amount).toFixed(2)}`,
-    });
+    if (mode === 'sell') {
+      Plotly.addTraces(ticker, {
+        y: Array(cnt).fill(limit),
+        type: 'line',
+        name: `Limit Price<br>$${limit.toFixed(2)}<br>Profit: ~$${((limit - breakEven) * amount).toFixed(2)}`,
+      });
+    } else {
+      Plotly.addTraces(ticker, {
+        y: Array(cnt).fill(limit),
+        type: 'line',
+        name: `Limit Price<br>$${limit.toFixed(2)}`,
+      });
+    }
   }
 };

@@ -16,15 +16,19 @@ function startEmitters() {
   websocketServer.emitter.on('request', async (request) => {
     if (request.type === 'ticker') {
       const data = await krakenData.getPricesData(tradingSymbol, request.interval);
-      const breakEven = await orderCalculator.calculateBreakEvenBeforeSell(tradingSymbol);
       const mode = await orderCalculator.determineMode(tradingSymbol);
+      // mode = 'buy';
+
+      let breakEven;
       let lastTrade;
       if (mode === 'sell') {
         lastTrade = await krakenData.getLastTrade(tradingSymbol);
+        breakEven = await orderCalculator.calculateBreakEvenBeforeSell(tradingSymbol);
       }
       websocketServer.emitter.emit('requestResponse', {
         prices: data, breakEven, mode, lastTrade,
       });
+      websocketServer.wss.broadcast({ limit: 4150 });
     }
   });
 
@@ -58,6 +62,6 @@ async function start() {
   setTimeout(() => {
     console.log('Sending limit');
     websocketServer.wss.broadcast({ limit: 4000 });
-  }, 6000);
+  }, 12000);
 }
 start();

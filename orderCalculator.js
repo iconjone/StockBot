@@ -23,4 +23,12 @@ async function calculateBreakEvenBeforeSell(tradingSymbol) {
     });
   });
 }
-module.exports = { emitter, determineMode, calculateBreakEvenBeforeSell };
+
+async function getBuyLimit(tradingSymbol) {
+  return new Promise((resolve) => {
+    resolve(3500);
+  });
+}
+module.exports = {
+  emitter, determineMode, calculateBreakEvenBeforeSell, getBuyLimit,
+};
