@@ -18,7 +18,7 @@ async function calculateBreakEvenBeforeSell(tradingSymbol) {
   emitter.emit('data', { request: 'lastTrade', tradingSymbol });
   return new Promise((resolve) => {
     emitter.once('lastTradeResponse', (lastTrade) => {
-      console.log(lastTrade);
+    //   console.log(lastTrade);
       resolve((lastTrade.fee + lastTrade.cost) / lastTrade.amount);
     });
   });

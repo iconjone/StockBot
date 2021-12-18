@@ -9,7 +9,7 @@ ws.onopen = function onOpen() {
   console.log('Connected to server');
   ws.send(
     JSON.stringify({
-      request: { type: 'ticker', tradingSymbol: 'ETH', interval: 5 },
+      request: { type: 'ticker', interval: 5 },
     }),
   );
 };
