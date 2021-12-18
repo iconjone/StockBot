@@ -17,9 +17,10 @@ websocketServer.emitter.on('request', async (request) => {
   }
 });
 
+//Testing limit moving
 setTimeout(() => {
   websocketServer.wss.broadcast({ limit: 3950 });
-}, 4 * 60 * 1000);
+}, 1 * 60 * 1000);
 
 // setting middleware
 const app = express();

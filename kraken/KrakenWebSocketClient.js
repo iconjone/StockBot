@@ -1,22 +1,22 @@
-const WebSocket = require('ws');
-const chalk = require('chalk');
-const KrakenRestClient = require('./KrakenRestClient');
+const WebSocket = require("ws");
+const chalk = require("chalk");
+const KrakenRestClient = require("./KrakenRestClient");
 
 // Public/Private method names
 const methods = {
-  public: ['ticker', 'ohlc', 'trade', 'spread', 'book'],
+  public: ["ticker", "ohlc", "trade", "spread", "book"],
   private: [
-    'ownTrades',
-    'openOrders',
-    'addOrder',
-    'cancelOrder',
-    'cancelAll',
-    'cancelAllOrdersAfter',
+    "ownTrades",
+    "openOrders",
+    "addOrder",
+    "cancelOrder",
+    "cancelAll",
+    "cancelAllOrdersAfter",
   ],
 };
 
 const getToken = (krakenRest) => {
-  krakenRest.api('GetWebSocketsToken').then((token) => {
+  krakenRest.api("GetWebSocketsToken").then((token) => {
     retToken = token.result.token;
     return retToken;
   });
@@ -24,30 +24,36 @@ const getToken = (krakenRest) => {
 
 class KrakenWebSocketClient {
   constructor(key, secret) {
-    this.wsAuth = new WebSocket('wss://ws-auth.kraken.com');
-    this.ws = new WebSocket('wss://ws.kraken.com');
-    this.authToken = 'Not Set Up';
+    this.wsAuth = new WebSocket("wss://ws-auth.kraken.com");
+    this.ws = new WebSocket("wss://ws.kraken.com");
+    this.authToken = "Not Set Up";
     this.subscriptions = [];
 
     const krakenRest = new KrakenRestClient(key, secret);
     //    console.log(getToken(krakenRest));
     function authenticateWS() {
-      this.wsAuth.on('open', (open) => {
-        console.log(chalk.green.underline('WebSocket Auth Opened'));
-        this.wsAuth.send(JSON.stringify({ event: 'ping' }));
-        krakenRest.api('GetWebSocketsToken').then((token) => {
+      this.wsAuth.on("open", (open) => {
+        console.log(chalk.green.underline("WebSocket Auth Opened"));
+        //keep alive, send ping every 5 minutes
+        setInterval(() => {
+          this.wsAuth.send(JSON.stringify({ event: "ping" }));
+        }, 5 * 60 * 1000);
+        this.wsAuth.send(JSON.stringify({ event: "ping" }));
+        krakenRest.api("GetWebSocketsToken").then((token) => {
           this.authToken = token.result.token;
           this.wsAuth.send(
             JSON.stringify({
-              event: 'subscribe',
+              event: "subscribe",
               subscription: {
-                name: 'ownTrades',
+                name: "ownTrades",
                 token: this.authToken,
               },
-            }),
+            })
           );
           this.subscriptions.forEach((sub) => {
-            console.log(chalk.yellow(`Subscribing to: ${sub.method} ${sub.pair}`));
+            console.log(
+              chalk.yellow(`Subscribing to: ${sub.method} ${sub.pair}`)
+            );
             this.api(sub.eventPass, sub.method, sub.pair, sub.params);
           });
         });
@@ -57,37 +63,40 @@ class KrakenWebSocketClient {
     authenticateWS();
     // this.authenticateWS();
     function validateWS() {
-      this.ws.on('open', (open) => {
-        console.log(chalk.green.underline('WebSocket Opened'));
-        this.ws.send(JSON.stringify({ event: 'ping' }));
+      this.ws.on("open", (open) => {
+        console.log(chalk.green.underline("WebSocket Opened"));
+        //keep alive, send ping every 5 minutes
+        setInterval(() => {
+          this.ws.send(JSON.stringify({ event: "ping" }));
+        }, 5 * 60 * 1000);
+        this.ws.send(JSON.stringify({ event: "ping" }));
       });
     }
     validateWS = validateWS.bind(this);
     validateWS();
     // when the websocket is closed or fails reconnect
-    this.ws.on('close', (close) => {
-      console.log(chalk.red.underline('WebSocket Closed'));
-      this.ws = new WebSocket('wss://ws.kraken.com');
-      this.wsAuth = new WebSocket('wss://ws-auth.kraken.com');
+    this.ws.on("close", (close) => {
+      console.log(chalk.red.underline("WebSocket Closed"));
+      this.ws = new WebSocket("wss://ws.kraken.com");
+      this.wsAuth = new WebSocket("wss://ws-auth.kraken.com");
       authenticateWS();
       validateWS();
     });
-
-    // this.ws.on("message", (data) => {
-    //   data = JSON.parse(data);
-    //   //console.log("WebSocket", data);
-    // });
   }
 
   api(eventPass, method, pair, params) {
-    if ('eventPass' === 'subscribe') {
+    if ("eventPass" === "subscribe") {
       this.subscriptions.push({
-        eventPass, method, pair, params,
+        eventPass,
+        method,
+        pair,
+        params,
       });
     }
     if (methods.public.includes(method)) {
       return this.publicMethod(eventPass, method, pair, params);
-    } if (methods.private.includes(method)) {
+    }
+    if (methods.private.includes(method)) {
       return this.privateMethod(eventPass, method, pair, params);
     }
     throw new Error(`${method} is not a valid WS method.`);
@@ -110,12 +119,12 @@ class KrakenWebSocketClient {
   }
 
   async privateMethod(eventPass, method, pair, params) {
-    if (pair && typeof pair === 'object') {
+    if (pair && typeof pair === "object") {
       pair = pair[0];
     }
 
     let payload = {};
-    if (eventPass == 'subscribe' || eventPass == 'unsubscribe') {
+    if (eventPass == "subscribe" || eventPass == "unsubscribe") {
       payload.subscription = params || {};
       payload.subscription.name = method;
       payload.subscription.token = this.authToken;
@@ -123,12 +132,14 @@ class KrakenWebSocketClient {
       payload = params || {};
       payload.token = this.authToken;
       if (pair) payload.pair = pair;
-      if (payload.price && typeof payload.price === 'number') payload.price = payload.price.toString();
-      if (payload.volume && typeof payload.volume === 'number') payload.volume = payload.volume.toString();
+      if (payload.price && typeof payload.price === "number")
+        payload.price = payload.price.toString();
+      if (payload.volume && typeof payload.volume === "number")
+        payload.volume = payload.volume.toString();
     }
     payload.event = eventPass;
 
-    if (this.wsAuth._readyState == 0 || this.authToken == 'Not Set Up') {
+    if (this.wsAuth._readyState == 0 || this.authToken == "Not Set Up") {
       // if the WebSocket is not ready, run recursive
       await new Promise((r) => setTimeout(r, 2000));
       this.privateMethod(eventPass, method, pair, params);
@@ -136,14 +147,5 @@ class KrakenWebSocketClient {
       this.wsAuth.send(JSON.stringify(payload));
     }
   }
-  // ws.send(
-  //   JSON.stringify({
-  //     event: "subscribe",
-  //     pair: ["XBT/USD", "XBT/EUR"],
-  //     subscription: {
-  //       name: "ticker",
-  //     },
-  //   })
-  // );
 }
 module.exports = KrakenWebSocketClient;
