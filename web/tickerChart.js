@@ -37,6 +37,7 @@ let cnt = 0;
 let mode = '';
 
 const ticker = document.getElementById('ticker');
+const AO = document.getElementById('AO');
 const modeText = document.getElementById('mode');
 const profitText = document.getElementById('profit');
 
@@ -133,5 +134,34 @@ ws.onmessage = function onMessage(evt) {
         name: `Limit Price<br>$${limit.toFixed(2)}`,
       });
     }
+  } else if (data.AO !== undefined) {
+    const AOdata = [];
+    const AOintervals = [1, 5, 15, 30, 60, 240];
+    AOintervals.forEach((interval, ite) => {
+      AOdata.push({
+        y: data.AO[`ohlc-${interval}`].slice(data.AO[`ohlc-${interval}`].length - 200), type: 'bar', name: `${interval}m<br>${data.AO[`ohlc-${interval}`][data.AO[`ohlc-${interval}`].length - 1].toFixed(2)}`, yaxis: `y${ite + 1}`, xaxis: `x${ite + 1}`,
+      });
+    });
+    Plotly.react(AO, AOdata, {
+      title: 'AO Chart',
+      xaxis: {
+        title: 'Time',
+        dtick: 25,
+      },
+      yaxis: {
+        title: 'AO Value',
+      },
+      paper_bgcolor: '#161f27',
+      plot_bgcolor: '#161f27',
+      font: {
+        color: '#dbdbdb',
+      },
+      grid: {
+        rows: 6,
+        columns: 1,
+        pattern: 'independent',
+        roworder: 'bottom to top',
+      },
+    });
   }
 };

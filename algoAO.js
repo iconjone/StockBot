@@ -6,7 +6,7 @@ const { AwesomeOscillator } = technicalindicators;
 
 const intervals = [1, 5, 15, 30, 60, 240];
 const AOs = {
-  1: [], 5: [], 15: [], 30: [], 60: [], 240: [],
+  'ohlc-1': [], 'ohlc-5': [], 'ohlc-15': [], 'ohlc-30': [], 'ohlc-60': [], 'ohlc-240': [],
 };
 
 function getAO(ohlc) {
@@ -24,10 +24,10 @@ function getAO(ohlc) {
 function getAllAOs(ohlc) {
   const allAOs = intervals.map((interval) => getAO(ohlc[`ohlc-${interval}`]));
   intervals.forEach((interval, ite) => {
-    AOs[interval] = allAOs[ite];
+    AOs[`ohlc-${interval}`] = allAOs[ite];
   });
 
   return AOs;
 }
 
-module.exports = { getAO, getAllAOs };
+module.exports = { getAO, getAllAOs, AOs };
