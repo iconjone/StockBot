@@ -22,6 +22,14 @@ ws.onopen = function onOpen() {
   );
 };
 
+// on ws error check for connection and reload page
+ws.onclose = function onClose(evt) {
+  console.log('Error/Close occured');
+  console.log(evt.data);
+  ws.close();
+  location.reload();
+};
+
 let breakEven = 0;
 let amount = 0;
 let limit = 0;

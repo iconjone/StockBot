@@ -13,6 +13,12 @@ function startEmitters() {
     websocketServer.wss.broadcast({ tickerClose: data });
   });
 
+  krakenData.emitter.on('ohlcUpdate', (data) => {
+    if (data === 'ohlc-240') {
+      orderCalculator.emitter.emit('ohlcUpdate');
+    }
+  });
+
   websocketServer.emitter.on('request', async (request) => {
     if (request.type === 'ticker') {
       const data = await krakenData.getPricesData(tradingSymbol, request.interval);
@@ -39,7 +45,14 @@ function startEmitters() {
     } else if (data.request === 'lastTrade') {
       const lastTrade = await krakenData.getLastTrade(data.tradingSymbol);
       orderCalculator.emitter.emit('lastTradeResponse', lastTrade);
+    } else if (data.request === 'ohlc') {
+      const ohlc = await krakenData.dataStorage.ohlc;
+      orderCalculator.emitter.emit('ohlcResponse', ohlc);
     }
+  });
+
+  orderCalculator.emitter.on('AOupdate', (data) => {
+    websocketServer.wss.broadcast({ AO: data });
   });
 }
 
@@ -57,6 +70,8 @@ async function start() {
 
   startEmitters();
   startWebServer();
+
+  orderCalculator.startCalculations();
 
   // after 1 minute send a limit
   setTimeout(() => {

@@ -20,7 +20,7 @@ async function getPricesData(tradingSymbol, interval) {
     pair: `${tradingSymbol}/USD`,
     interval,
   });
-  if (data.result[`${tradingSymbol}/USD`] === undefined) {
+  if (data.result !== undefined && data.result[`${tradingSymbol}/USD`] === undefined) {
     // console.log('Error - trying again');
 
     return getPricesData(tradingSymbol, interval);
@@ -35,7 +35,7 @@ async function getOHLCData(tradingSymbol, interval) {
     pair: `${tradingSymbol}/USD`,
     interval,
   });
-  if (data.result[`${tradingSymbol}/USD`] === undefined) {
+  if (data.result === undefined || data.result[`${tradingSymbol}/USD`] === undefined) {
     // console.log('Error - trying again');
     return getOHLCData(tradingSymbol, interval);
   }
@@ -106,13 +106,13 @@ async function getLastTrade(tradingSymbol, offset = 0) {
 
 async function collectData(tradingSymbol) {
   console.log(chalk.blue('Subscribing to OHLC/Ticker data'));
+  krakenWebSocket.api('subscribe', 'ticker', [`${tradingSymbol}/USD`]); // Subscribe to ticker
   const getOHLCIntervals = [1, 5, 15, 30, 60, 240];
   getOHLCIntervals.forEach((interval) => {
     krakenWebSocket.api('subscribe', 'ohlc', [`${tradingSymbol}/USD`], {
       interval,
     }); // Subscribe to ohlc
   });
-  krakenWebSocket.api('subscribe', 'ticker', [`${tradingSymbol}/USD`]); // Subscribe to ticker
   console.log(chalk.blue('Initializing data collection'));
   const getPrices = await getPricesData(tradingSymbol, '1');
   dataStorage.prices.push(...getPrices);
@@ -134,8 +134,11 @@ async function collectData(tradingSymbol) {
         emitter.emit('tickerClose', messageData[1].c[0]);
         dataStorage.prices.push(messageData[1].c[0]);
         // console.log(data[1].c[0]);
+        // console.log('ticker');
       }
       if (messageData[2].includes('ohlc')) {
+        emitter.emit('ohlcUpdate', messageData[2]);
+        // console.log(messageData[2]);
         if (dataStorage.ohlc[messageData[2]].time < parseFloat(messageData[1][1])) {
           dataStorage.ohlc[messageData[2]].time = parseFloat(messageData[1][1]);
           dataStorage.ohlc[messageData[2]].data.push(
@@ -148,6 +151,16 @@ async function collectData(tradingSymbol) {
               volume: parseFloat(messageData[1][7]),
             },
           );
+        } else {
+          dataStorage.ohlc[messageData[2]]
+            .data[dataStorage.ohlc[messageData[2]].data.length - 1] = {
+              time: parseFloat(messageData[1][1]),
+              open: parseFloat(messageData[1][2]),
+              high: parseFloat(messageData[1][3]),
+              low: parseFloat(messageData[1][4]),
+              close: parseFloat(messageData[1][5]),
+              volume: parseFloat(messageData[1][7]),
+            };
         }
       }
     }
