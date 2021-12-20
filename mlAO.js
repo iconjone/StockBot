@@ -15,40 +15,44 @@ function formatData(data, size) {
   return output;
 }
 
-async function predict(AO) {
-  console.log('Running Prediction');
-  const net = new brain.recurrent.LSTMTimeStep({
-    inputSize: 10,
-    hiddenLayers: [20, 20, 20],
-    outputSize: 10,
-  });
-  const scaledData = scaler.fit_transform(AO);
-  const formattedData = formatData(scaledData, 10);
-  //   console.log(formattedData[formattedData.length - 1]);
-  return new Promise((resolve) => {
-    net.train(formattedData, {
-      learningRate: 0.005,
-      momentum: 0.005,
-      errorThresh: 0.07,
-      log: false,
-      iterations: 10000,
-    });
-    const forecastedData = net.forecast(formattedData, 1);
-    // console.log(scaler.inverse_transform(formattedData[formattedData.length - 1]));
-    const scaledForecastedData = scaler.inverse_transform(forecastedData[0]);
-    resolve([
-      scaledForecastedData[0],
-      scaledForecastedData[1],
-      scaledForecastedData[2],
-      scaledForecastedData[3],
-      scaledForecastedData[4],
-      scaledForecastedData[5],
-      scaledForecastedData[6],
-      scaledForecastedData[7],
-      scaledForecastedData[8],
-      scaledForecastedData[9],
-    ]);
-  });
-}
+const AO = process.argv[2].split(',');
+const interval = process.argv[3];
+console.log(`Running Prediction for interval: ${interval}`);
+const net = new brain.recurrent.LSTMTimeStep({
+  inputSize: 10,
+  hiddenLayers: [30, 15],
+  outputSize: 10,
+});
+const scaledData = scaler.fit_transform(AO);
+const formattedData = formatData(scaledData, 10);
+// testing accuracy of model
+formattedData.pop();
+//   console.log(formattedData[formattedData.length - 1]);
 
-module.exports = { predict };
+net.train(formattedData, {
+  learningRate: 0.005,
+  momentum: 0.005,
+  errorThresh: 0.01,
+  log: (stats) => {
+    console.log(stats);
+  },
+  iterations: 20000,
+});
+
+const forecastedData = net.forecast(formattedData, 1);
+// console.log(scaler.inverse_transform(formattedData[formattedData.length - 1]));
+let scaledForecastedData = scaler.inverse_transform(forecastedData[0]);
+scaledForecastedData = [
+  scaledForecastedData[0],
+  scaledForecastedData[1],
+  scaledForecastedData[2],
+  scaledForecastedData[3],
+  scaledForecastedData[4],
+  scaledForecastedData[5],
+  scaledForecastedData[6],
+  scaledForecastedData[7],
+  scaledForecastedData[8],
+  scaledForecastedData[9],
+];
+
+process.send({ MLAO: { interval, AO: scaledForecastedData } });
