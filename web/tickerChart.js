@@ -137,16 +137,29 @@ ws.onmessage = function onMessage(evt) {
   } else if (data.AO !== undefined) {
     const AOdata = [];
     const AOintervals = [1, 5, 15, 30, 60, 240];
+
     AOintervals.forEach((interval, ite) => {
-      AOdata.push({
-        y: data.AO[`ohlc-${interval}`].slice(data.AO[`ohlc-${interval}`].length - 200), type: 'bar', name: `${interval}m<br>${data.AO[`ohlc-${interval}`][data.AO[`ohlc-${interval}`].length - 1].toFixed(2)}`, yaxis: `y${ite + 1}`, xaxis: `x${ite + 1}`,
-      });
+      const trace = {
+        y: data.AO[`ohlc-${interval}`].slice(data.AO[`ohlc-${interval}`].length - 100),
+        type: 'bar',
+        name: `${interval}m<br>${data.AO[`ohlc-${interval}`][data.AO[`ohlc-${interval}`].length - 1].toFixed(2)}`,
+        yaxis: `y${ite + 1}`,
+        xaxis: `x${ite + 1}`,
+      };
+      if (data.AO[`ohlc-${interval}-predict`] !== undefined) {
+        trace.y.push(...data.AO[`ohlc-${interval}-predict`]);
+        trace.marker = {};
+        trace.marker.color = [...Array(100).fill('rgb(31, 119, 180)'), ...Array(10).fill('rgb(255, 119, 180 ,.65)')];
+      }
+
+      AOdata.push(trace);
     });
+
     Plotly.react(AO, AOdata, {
       title: 'AO Chart',
       xaxis: {
         title: 'Time',
-        dtick: 25,
+        dtick: 10,
       },
       yaxis: {
         title: 'AO Value',
@@ -156,11 +169,12 @@ ws.onmessage = function onMessage(evt) {
       font: {
         color: '#dbdbdb',
       },
+      height: 800,
       grid: {
         rows: 6,
         columns: 1,
         pattern: 'independent',
-        roworder: 'bottom to top',
+        roworder: 'top to bottom',
       },
     });
   }

@@ -52,6 +52,10 @@ async function startCalculations() {
   emitter.on('ohlcUpdate', async () => {
     emitter.emit('AOupdate', algoAO.getAllAOs(await getOHLCData()));
   });
+  setTimeout(async () => {
+    algoAO.startMLAO();
+  }, 30000);
+  console.log('wait');
 //   console.log(a.slice(650));
 }
 

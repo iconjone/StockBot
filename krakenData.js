@@ -19,8 +19,14 @@ async function getPricesData(tradingSymbol, interval) {
   const data = await krakenRest.api('OHLC', {
     pair: `${tradingSymbol}/USD`,
     interval,
+  }).catch((err) => {
+    console.log(chalk.red(err));
+    return getPricesData(tradingSymbol, interval);
   });
-  if (data.result !== undefined && data.result[`${tradingSymbol}/USD`] === undefined) {
+  if (data.result === undefined) {
+    return getPricesData(tradingSymbol, interval);
+  }
+  if (data.result[`${tradingSymbol}/USD`] === undefined) {
     // console.log('Error - trying again');
 
     return getPricesData(tradingSymbol, interval);
@@ -35,7 +41,10 @@ async function getOHLCData(tradingSymbol, interval) {
     pair: `${tradingSymbol}/USD`,
     interval,
   });
-  if (data.result === undefined || data.result[`${tradingSymbol}/USD`] === undefined) {
+  if (data.result === undefined) {
+    return getOHLCData(tradingSymbol, interval);
+  }
+  if (data.result[`${tradingSymbol}/USD`] === undefined) {
     // console.log('Error - trying again');
     return getOHLCData(tradingSymbol, interval);
   }
