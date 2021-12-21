@@ -3,7 +3,7 @@
 // const Plotly = require('./plotly');
 
 // Connect to websocket server
-const ws = new WebSocket('ws://localhost:8080');
+const ws = new WebSocket('ws://localhost:80');
 console.log(ws);
 ws.onopen = function onOpen() {
   console.log('Connected to server');
@@ -137,6 +137,7 @@ ws.onmessage = function onMessage(evt) {
   } else if (data.AO !== undefined) {
     const AOdata = [];
     const AOintervals = [1, 5, 15, 30, 60, 240];
+    AOintervalsColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
 
     AOintervals.forEach((interval, ite) => {
       const trace = {
@@ -149,7 +150,7 @@ ws.onmessage = function onMessage(evt) {
       if (data.AO[`ohlc-${interval}-predict`] !== undefined) {
         trace.y.push(...data.AO[`ohlc-${interval}-predict`]);
         trace.marker = {};
-        trace.marker.color = [...Array(100).fill('rgb(31, 119, 180)'), ...Array(10).fill('rgb(255, 119, 180 ,.65)')];
+        trace.marker.color = [...Array(100).fill(AOintervalsColors[ite]), ...Array(10).fill('#c3ff0e')];
       }
 
       AOdata.push(trace);

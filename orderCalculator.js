@@ -54,7 +54,7 @@ async function startCalculations() {
   });
   setTimeout(async () => {
     algoAO.startMLAO();
-  }, 30000);
+  }, 3000);
   console.log('wait');
 //   console.log(a.slice(650));
 }

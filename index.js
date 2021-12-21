@@ -34,7 +34,7 @@ function startEmitters() {
       websocketServer.emitter.emit('requestResponse', {
         prices: data, breakEven, mode, lastTrade,
       });
-      websocketServer.wss.broadcast({ limit: 4150 });
+      websocketServer.wss.broadcast({ limit: 3900 });
     }
   });
 
@@ -76,7 +76,7 @@ async function start() {
   // after 1 minute send a limit
   setTimeout(() => {
     console.log('Sending limit');
-    websocketServer.wss.broadcast({ limit: 4000 });
+    websocketServer.wss.broadcast({ limit: 3800 });
   }, 12000);
 }
 start();
