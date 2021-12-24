@@ -25,12 +25,6 @@ async function calculateBreakEvenBeforeSell(tradingSymbol) {
   });
 }
 
-async function getBuyLimit(tradingSymbol) {
-  return new Promise((resolve) => {
-    resolve(3500);
-  });
-}
-
 async function getOHLCData() {
   return new Promise((resolve) => {
     emitter.emit('data', { request: 'ohlc' });
@@ -47,18 +41,18 @@ async function getOHLCData() {
   });
 }
 
-async function startCalculations() {
+async function startCalculations(tradingSymbol) {
   console.log('Starting calculations...');
   emitter.on('ohlcUpdate', async () => {
     emitter.emit('AOupdate', algoAO.getAllAOs(await getOHLCData()));
   });
-  setTimeout(async () => {
-    algoAO.startMLAO();
-  }, 3000);
+
+  algoAO.startMLAO(tradingSymbol);
+
   console.log('wait');
 //   console.log(a.slice(650));
 }
 
 module.exports = {
-  emitter, determineMode, calculateBreakEvenBeforeSell, getBuyLimit, startCalculations,
+  emitter, determineMode, calculateBreakEvenBeforeSell, startCalculations,
 };

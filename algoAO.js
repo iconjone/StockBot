@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const { fork } = require('child_process');
 
 const technicalindicators = require('technicalindicators');
@@ -24,7 +25,7 @@ const AOs = {
   'ohlc-60-predict': [],
   'ohlc-240-predict': [],
 };
-const ohlcStore = {};
+let ohlcStore = {};
 
 function getAO(ohlc) {
   let high = [];
@@ -48,6 +49,80 @@ function getAllAOs(ohlc) {
   return AOs;
 }
 
+function predictLimit(mode) {
+  // get max or min depending on mode, using that predict the price it will be at the limit if the
+  const intervalLimits = {
+    1: -1, 5: -1, 15: -1, 30: -1, 60: -1, 240: -1,
+  };
+  // Let's assume mode is in buy
+  // start from highest interval and work our way down
+  for (let i = intervals.length - 1; i >= 0; i -= 1) {
+    const interval = intervals[i];
+    const AO = AOs[`ohlc-${interval}`];
+    const AOpredict = AOs[`ohlc-${interval}-predict`];
+    // get the minimum or maximum, and the index of the value depending on mode of AOpredict
+    const predictTOR = { index: 0, value: AOpredict[0] };
+    for (let j = 1; j < AOpredict.length; j += 1) {
+      if (mode === 'buy') {
+        if (AOpredict[j] < predictTOR.value) {
+          predictTOR.value = AOpredict[j];
+          predictTOR.index = j;
+        }
+      } else if (mode === 'sell') {
+        if (AOpredict[j] > predictTOR.value) {
+          predictTOR.value = AOpredict[j];
+          predictTOR.index = j;
+        }
+      }
+    }
+
+    console.log('predictTOR', predictTOR);
+    // if the val is negative and we are in buy mode, or is positive and we are in sell mode, we can move on
+    if ((predictTOR.value < 0 && mode === 'buy') || (predictTOR.value > 0 && mode === 'sell')) {
+      console.log('Predicted TOR is', (predictTOR.index + 1) * interval, 'minutes from now');
+      // get percentage difference of predictTor.value and each element of predictAO array
+      const percentageDiff = AOpredict
+        .map((val) => {
+          const diff = val - predictTOR.value;
+          const percentage = Math.abs(diff / predictTOR.value);
+          return percentage;
+        });
+        // get surrouding values of the index of the minimum or maximum
+      const surroundingValuesPercentageDiff = [];
+      for (let k = 0; k < percentageDiff.length; k += 1) {
+        if (k === predictTOR.index - 1 || k === predictTOR.index + 1) {
+          surroundingValuesPercentageDiff.push(percentageDiff[k]);
+        }
+      }
+      console.log('surroundingValuesPercentageDiff', surroundingValuesPercentageDiff);
+
+      // get the average of the surrounding values
+      const average = surroundingValuesPercentageDiff.reduce((acc, val) => (acc + val) / surroundingValuesPercentageDiff.length, 0);
+      console.log(average, 'average of surrounding values');
+      // if the average is greater than 0.01, (1%) we can move on
+      if (average > 0.01) {
+        console.log("let's calculate");
+        // find the closest value in AO array to the predictTOR.value
+        const closestValue = AO.reduce(
+          (acc, val, index) => {
+            const diff = Math.abs(val - predictTOR.value);
+            if (diff < acc.diff) {
+              return { diff, value: val, index };
+            }
+            return acc;
+          },
+          { diff: Infinity, value: 0, index: 0 },
+        );
+        console.log('closestValue', closestValue);
+        const suggestedPrice = ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - (AO.length - closestValue.index)];
+        console.log('suggestedPrice', suggestedPrice);
+      }
+    }
+  }
+}
+
+// return limit;
+
 async function predictAO(interval) {
   console.log('Started predicting AO for interval:', interval);
   const child = fork('mlAO.js', [AOs[`ohlc-${interval}`], interval]);
@@ -55,6 +130,11 @@ async function predictAO(interval) {
     if (message.MLAO) {
       console.log('Received MLAO for interval:', message.MLAO.interval);
       AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
+      console.log('Sell prediction');
+      console.log('Limit Predict', predictLimit('sell'));
+      console.log('Buy prediction');
+      console.log('Limit Predict', predictLimit('buy'));
+
       // console.log('Predicted AO for interval: ', message.MLAO.interval, '\n', message.MLAO.AO);
     }
   });
@@ -72,12 +152,12 @@ async function predictAO(interval) {
 function startMLAO() {
   if (AOs['ohlc-1'].length > 0 && AOs['ohlc-5'].length > 0 && AOs['ohlc-15'].length > 0 && AOs['ohlc-30'].length > 0 && AOs['ohlc-60'].length > 0 && AOs['ohlc-240'].length > 0) {
     console.log('Started MLAO');
-    // predictAO('1');
-    // predictAO('5');
+    predictAO('1');
+    predictAO('5');
 
-    intervals.forEach((interval) => {
-      predictAO(interval);
-    });
+    // intervals.forEach((interval) => {
+    //   predictAO(interval);
+    // });
 
     timer = setInterval(() => {
       predictAO('1');
@@ -93,11 +173,11 @@ function startMLAO() {
 
     setInterval(() => {
       predictAO('30');
-    }, 1000 * 60 * 15); // every 10 minutes predict Interval 30
+    }, 1000 * 60 * 15); // every 15 minutes predict Interval 30
 
     setInterval(() => {
       predictAO('60');
-    }, 1000 * 60 * 20); // every 32 minutes predict Interval 60
+    }, 1000 * 60 * 17); // every 17 minutes predict Interval 60
 
     setInterval(() => {
       predictAO('240');
@@ -109,15 +189,6 @@ function startMLAO() {
       startMLAO();
     }, 2500);
   }
-}
-
-function predictLimit(interval, predictAO) {
-  // get max or min depending on mode, using that predict the price it will be at the limit if the
-  let limit = 0;
-  if (predictAO) {
-    limit = Math.max(...AOs[`ohlc-${interval}-predict`]);
-  }
-  return limit;
 }
 
 module.exports = {

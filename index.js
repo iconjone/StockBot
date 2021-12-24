@@ -34,7 +34,7 @@ function startEmitters() {
       websocketServer.emitter.emit('requestResponse', {
         prices: data, breakEven, mode, lastTrade,
       });
-      websocketServer.wss.broadcast({ limit: 3900 });
+      // websocketServer.wss.broadcast({ limit: 3900 });
     }
   });
 
@@ -71,12 +71,15 @@ async function start() {
   startEmitters();
   startWebServer();
 
-  orderCalculator.startCalculations();
+  orderCalculator.startCalculations(tradingSymbol);
 
   // after 1 minute send a limit
-  setTimeout(() => {
-    console.log('Sending limit');
-    websocketServer.wss.broadcast({ limit: 3800 });
+  setInterval(() => {
+    // random number between 3940 and 3990
+    const limitRand = Math.floor(Math.random() * (3990 - 3940 + 1)) + 3940;
+    console.log(chalk.green('Sending limit: '), chalk.yellow(limitRand));
+
+    websocketServer.wss.broadcast({ limit: limitRand });
   }, 12000);
 }
 start();

@@ -9,7 +9,7 @@ ws.onopen = function onOpen() {
   console.log('Connected to server');
   ws.send(
     JSON.stringify({
-      request: { type: 'ticker', interval: 5 },
+      request: { type: 'ticker', interval: 1 },
     }),
   );
 
@@ -116,7 +116,8 @@ ws.onmessage = function onMessage(evt) {
       });
     }
   } else if (data.limit !== undefined) {
-    traceNum = data.limit.type === 'buy' ? 1 : 2;
+    traceNum = mode === 'buy' ? 1 : 2;
+    console.log(traceNum);
     if (limit !== 0) {
       Plotly.deleteTraces(ticker, [traceNum]);
     }
