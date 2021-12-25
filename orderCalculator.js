@@ -46,11 +46,8 @@ async function startCalculations(tradingSymbol) {
   emitter.on('ohlcUpdate', async () => {
     emitter.emit('AOupdate', algoAO.getAllAOs(await getOHLCData()));
   });
-
+  algoAO.passMode(await determineMode(tradingSymbol));
   algoAO.startMLAO(tradingSymbol);
-
-  console.log('wait');
-//   console.log(a.slice(650));
 }
 
 module.exports = {

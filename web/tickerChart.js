@@ -3,7 +3,8 @@
 // const Plotly = require('./plotly');
 
 // Connect to websocket server
-const ws = new WebSocket('ws://localhost:80');
+
+const ws = new WebSocket(`ws://${window.location.hostname}:80`);
 console.log(ws);
 ws.onopen = function onOpen() {
   console.log('Connected to server');

@@ -74,12 +74,12 @@ async function start() {
   orderCalculator.startCalculations(tradingSymbol);
 
   // after 1 minute send a limit
-  setInterval(() => {
-    // random number between 3940 and 3990
-    const limitRand = Math.floor(Math.random() * (3990 - 3940 + 1)) + 3940;
-    console.log(chalk.green('Sending limit: '), chalk.yellow(limitRand));
+  // setInterval(() => {
+  // random number between 3940 and 3990
+  const limitRand = Math.floor(Math.random() * (3990 - 3940 + 1)) + 3940;
+  console.log(chalk.green('Sending limit: '), chalk.yellow(limitRand));
 
-    websocketServer.wss.broadcast({ limit: limitRand });
-  }, 12000);
+  websocketServer.wss.broadcast({ limit: limitRand });
+  // }, 12000);
 }
 start();

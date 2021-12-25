@@ -8,6 +8,8 @@ const helper = require('./helper');
 // const mlAO = require('./mlAO');
 let timer = null;
 
+let mode = '';
+
 const { AwesomeOscillator } = technicalindicators;
 
 const intervals = [1, 5, 15, 30, 60, 240];
@@ -26,6 +28,10 @@ const AOs = {
   'ohlc-240-predict': [],
 };
 let ohlcStore = {};
+
+function passMode(pass) {
+  mode = pass;
+}
 
 function getAO(ohlc) {
   let high = [];
@@ -130,10 +136,11 @@ async function predictAO(interval) {
     if (message.MLAO) {
       console.log('Received MLAO for interval:', message.MLAO.interval);
       AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
-      console.log('Sell prediction');
-      console.log('Limit Predict', predictLimit('sell'));
-      console.log('Buy prediction');
-      console.log('Limit Predict', predictLimit('buy'));
+      // console.log('Sell prediction');
+      // console.log('Limit Predict', predictLimit('sell'));
+      // console.log('Buy prediction');
+      // console.log('Limit Predict', predictLimit('buy'));
+      console.log('Limit Predict', predictLimit(mode));
 
       // console.log('Predicted AO for interval: ', message.MLAO.interval, '\n', message.MLAO.AO);
     }
@@ -192,5 +199,5 @@ function startMLAO() {
 }
 
 module.exports = {
-  getAO, getAllAOs, AOs, predictAO, startMLAO,
+  getAO, getAllAOs, AOs, predictAO, startMLAO, passMode, predictLimit,
 };
