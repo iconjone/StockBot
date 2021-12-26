@@ -24,7 +24,14 @@ const net = new brain.recurrent.LSTMTimeStep({
   hiddenLayers: [20, 30, 20],
   outputSize: 10,
 });
-const scaledData = scaler.fit_transform(AO);
+let scaledData = [];
+console.log(AO);
+try {
+  scaledData = scaler.fit_transform(AO);
+} catch (err) {
+  console.log(err);
+  console.log(AO);
+}
 const formattedData = formatData(scaledData, 10);
 // testing accuracy of model
 // formattedData.pop();

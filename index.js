@@ -1,11 +1,12 @@
 // import data collector
+require('dotenv').config();
 const express = require('express');
 const chalk = require('chalk');
 const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
 const orderCalculator = require('./orderCalculator');
 
-const tradingSymbol = 'ETH';
+const tradingSymbol = process.env.TRADINGSYMBOL;
 
 function startEmitters() {
   krakenData.emitter.on('tickerClose', (data) => {
@@ -54,6 +55,10 @@ function startEmitters() {
   orderCalculator.emitter.on('AOupdate', (data) => {
     websocketServer.wss.broadcast({ AO: data });
   });
+
+  orderCalculator.emitter.on('limitPredict', (data) => {
+    websocketServer.wss.broadcast({ limit: data });
+  });
 }
 
 function startWebServer() {
@@ -76,10 +81,10 @@ async function start() {
   // after 1 minute send a limit
   // setInterval(() => {
   // random number between 3940 and 3990
-  const limitRand = Math.floor(Math.random() * (3990 - 3940 + 1)) + 3940;
-  console.log(chalk.green('Sending limit: '), chalk.yellow(limitRand));
+  // const limitRand = Math.floor(Math.random() * (3990 - 3940 + 1)) + 3940;
+  // console.log(chalk.green('Sending limit: '), chalk.yellow(limitRand));
 
-  websocketServer.wss.broadcast({ limit: limitRand });
+  // websocketServer.wss.broadcast({ limit: limitRand });
   // }, 12000);
 }
 start();

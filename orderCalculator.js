@@ -3,6 +3,8 @@ const algoAO = require('./algoAO');
 
 const emitter = new EventEmitter();
 
+const intervals = [1, 5, 15, 30, 60, 240];
+
 async function determineMode(tradingSymbol) {
   emitter.emit('data', { request: 'balance' });
   return new Promise((resolve) => {
@@ -40,6 +42,23 @@ async function getOHLCData() {
     });
   });
 }
+
+algoAO.emitter.on('limitPredict', (prediction) => {
+  console.log('Limit Predict', prediction);
+  // average any limits that are not -1
+  let average = 0;
+  let count = 0;
+  intervals.forEach((interval) => {
+    if (prediction[interval].price !== -1) {
+      average += prediction[interval].price;
+      count += 1;
+    }
+  });
+  average /= count;
+  if (count !== 0) {
+    emitter.emit('limitPredict', average);
+  }
+});
 
 async function startCalculations(tradingSymbol) {
   console.log('Starting calculations...');
