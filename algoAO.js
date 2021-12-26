@@ -56,6 +56,9 @@ function getAllAOs(ohlc) {
 }
 
 function predictLimit(mode) {
+  // most recent price
+
+  const lastPrice = ohlcStore['ohlc-1'].data[ohlcStore['ohlc-1'].data.length - 1].close;
   // get max or min depending on mode, using that predict the price it will be at the limit if the
   const intervalLimits = {
     1: -1, 5: -1, 15: -1, 30: -1, 60: -1, 240: -1,
@@ -100,14 +103,13 @@ function predictLimit(mode) {
           surroundingValuesPercentageDiff.push(percentageDiff[k]);
         }
       }
-      console.log('surroundingValuesPercentageDiff', surroundingValuesPercentageDiff);
 
       // get the average of the surrounding values
       const average = surroundingValuesPercentageDiff.reduce((acc, val) => (acc + val) / surroundingValuesPercentageDiff.length, 0);
       console.log(average, 'average of surrounding values');
       // if the average is greater than 0.01, (1%) we can move on
       if (average > 0.01) {
-        console.log("let's calculate");
+        console.log('Viable DATA, we can move on');
         // find the closest value in AO array to the predictTOR.value
         const closestValue = AO.reduce(
           (acc, val, index) => {
@@ -119,12 +121,23 @@ function predictLimit(mode) {
           },
           { diff: Infinity, value: 0, index: 0 },
         );
-        console.log('closestValue', closestValue);
-        const suggestedPrice = ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - (AO.length - closestValue.index)];
-        console.log('suggestedPrice', suggestedPrice);
+        const closestOHLC = ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - (AO.length - closestValue.index)];
+        console.log('closestOHLC', closestOHLC);
+        // get the extrapolated price at the tor
+        let extrapolatedPrice = 0;
+        for (let k = 0; k < predictTOR.index; k += 1) {
+          extrapolatedPrice += AOpredict[k];
+        }
+        extrapolatedPrice += ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - 1].low;
+        // depending on mode, if the extrapolated price is greater or less than the lastPrice by 1 percent, we can move on
+        if ((mode === 'buy' && extrapolatedPrice < lastPrice * (1 - (0.75 / 100))) || (mode === 'sell' && extrapolatedPrice > lastPrice * (1 + (0.75 / 100)))) {
+          intervalLimits[interval] = extrapolatedPrice;
+        }
       }
     }
   }
+  console.log('intervalLimits', intervalLimits);
+  return intervalLimits;
 }
 
 // return limit;
@@ -161,6 +174,7 @@ function startMLAO() {
     console.log('Started MLAO');
     predictAO('1');
     predictAO('5');
+    predictAO('15');
 
     // intervals.forEach((interval) => {
     //   predictAO(interval);
@@ -178,17 +192,17 @@ function startMLAO() {
       predictAO('15');
     }, 1000 * 60 * 7); // every 7 minutes predict Interval 15
 
-    setInterval(() => {
-      predictAO('30');
-    }, 1000 * 60 * 15); // every 15 minutes predict Interval 30
+    // setInterval(() => {
+    //   predictAO('30');
+    // }, 1000 * 60 * 15); // every 15 minutes predict Interval 30
 
-    setInterval(() => {
-      predictAO('60');
-    }, 1000 * 60 * 17); // every 17 minutes predict Interval 60
+    // setInterval(() => {
+    //   predictAO('60');
+    // }, 1000 * 60 * 17); // every 17 minutes predict Interval 60
 
-    setInterval(() => {
-      predictAO('240');
-    }, 1000 * 60 * 20); // every 20 minutes predict Interval 240
+    // setInterval(() => {
+    //   predictAO('240');
+    // }, 1000 * 60 * 20); // every 20 minutes predict Interval 240
   } else {
     console.log('No data to predict AO, waiting for data...');
     // wait for data to be loaded
