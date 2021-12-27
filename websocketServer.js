@@ -7,7 +7,7 @@ const WebSocketServer = require('ws').Server;
 // const WebSocket = require('ws').Client;
 
 const wss = new WebSocketServer({
-  port: 80,
+  port: 5000,
 });
 // send a message to all websocket clients
 wss.broadcast = function broadcast(data) {

@@ -4,7 +4,7 @@
 
 // Connect to websocket server
 
-const ws = new WebSocket(`ws://${window.location.hostname}:80`);
+const ws = new WebSocket(`ws://${window.location.hostname}:5000`);
 console.log(ws);
 ws.onopen = function onOpen() {
   console.log('Connected to server');

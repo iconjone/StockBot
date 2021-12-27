@@ -66,7 +66,7 @@ function startWebServer() {
   const app = express();
   app.use(express.static('./web')); // Serves resources from web folder
 
-  app.listen(5000); // const server = app.listen(5000);
+  app.listen(80); // const server = app.listen(5000);
 }
 
 async function start() {
