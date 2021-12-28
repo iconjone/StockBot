@@ -12,6 +12,7 @@ function startEmitters() {
   krakenData.emitter.on('tickerClose', (data) => {
   // console.log("there's data", data);
     websocketServer.wss.broadcast({ tickerClose: data });
+    orderCalculator.emitter.emit('tickerClose', data);
   });
 
   krakenData.emitter.on('ohlcUpdate', (data) => {
@@ -49,6 +50,9 @@ function startEmitters() {
     } else if (data.request === 'ohlc') {
       const ohlc = await krakenData.dataStorage.ohlc;
       orderCalculator.emitter.emit('ohlcResponse', ohlc);
+    } else if (data.request === 'ticker') {
+      const prices = await krakenData.dataStorage.prices;
+      orderCalculator.emitter.emit('tickerResponse', prices);
     }
   });
 
@@ -67,6 +71,7 @@ function startWebServer() {
   app.use(express.static('./web')); // Serves resources from web folder
 
   app.listen(80); // const server = app.listen(5000);
+  app.listen(443);
 }
 
 async function start() {

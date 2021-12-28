@@ -128,19 +128,23 @@ function predictLimit(mode) {
         // console.log('closestOHLC', closestOHLC);
         // get the extrapolated price at the tor
         let extrapolatedPrice = 0;
-        for (let k = 0; k < predictTOR.index; k += 1) {
-          extrapolatedPrice += AOpredict[k];
+        for (let k = 0; k < predictTOR.index - 1; k += 1) {
+          extrapolatedPrice += AOpredict[k + 1] - AOpredict[k];
         }
-        extrapolatedPrice += ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - 1].low;
+        if (mode === 'buy') {
+          extrapolatedPrice += ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - 1].low;
+        } else if (mode === 'sell') {
+          extrapolatedPrice += ohlcStore[`ohlc-${interval}`].data[ohlcStore[`ohlc-${interval}`].data.length - 1].high;
+        }
         // depending on mode, if the extrapolated price is greater or less than the lastPrice by 1 percent, we can move on
-        if ((mode === 'buy' && extrapolatedPrice < lastPrice * (1 - (0.75 / 100))) || (mode === 'sell' && extrapolatedPrice > lastPrice * (1 + (0.75 / 100)))) {
-          intervalLimits[interval].price = extrapolatedPrice;
-          intervalLimits[interval].time = (predictTOR.index + 1) * interval;
-        }
+        // if ((mode === 'buy' && extrapolatedPrice < lastPrice * (1 - (0.75 / 100))) || (mode === 'sell' && extrapolatedPrice > lastPrice * (1 + (0.75 / 100)))) {
+        intervalLimits[interval].price = extrapolatedPrice;
+        intervalLimits[interval].time = (predictTOR.index + 1) * interval;
+        // }
       }
     }
   }
-  console.log('intervalLimits', intervalLimits);
+  // console.log('intervalLimits', intervalLimits);
   return intervalLimits;
 }
 
@@ -153,11 +157,7 @@ async function predictAO(interval) {
     if (message.MLAO) {
       console.log('Received MLAO for interval:', message.MLAO.interval);
       AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
-      // console.log('Sell prediction');
-      // console.log('Limit Predict', predictLimit('sell'));
-      // console.log('Buy prediction');
-      // console.log('Limit Predict', predictLimit('buy'));
-      // console.log('Limit Predict', predictLimit(mode));
+
       emitter.emit('limitPredict', predictLimit(mode));
 
       // console.log('Predicted AO for interval: ', message.MLAO.interval, '\n', message.MLAO.AO);
@@ -180,6 +180,7 @@ function startMLAO() {
     predictAO('1');
     predictAO('5');
     predictAO('15');
+    // predictAO('240');
 
     // intervals.forEach((interval) => {
     //   predictAO(interval);

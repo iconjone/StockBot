@@ -1,5 +1,6 @@
 const { EventEmitter } = require('events');
 const algoAO = require('./algoAO');
+const reactive = require('./reactive');
 
 const emitter = new EventEmitter();
 
@@ -43,7 +44,17 @@ async function getOHLCData() {
   });
 }
 
+async function getPricesData() {
+  return new Promise((resolve) => {
+    emitter.emit('data', { request: 'ticker' });
+    emitter.once('tickerResponse', (data) => {
+      resolve(data);
+    });
+  });
+}
+
 algoAO.emitter.on('limitPredict', (prediction) => {
+  reactive.emitter.emit('limitPredict', prediction);
   console.log('Limit Predict', prediction);
   // average any limits that are not -1
   let average = 0;
@@ -63,9 +74,24 @@ algoAO.emitter.on('limitPredict', (prediction) => {
 async function startCalculations(tradingSymbol) {
   console.log('Starting calculations...');
   emitter.on('ohlcUpdate', async () => {
-    emitter.emit('AOupdate', algoAO.getAllAOs(await getOHLCData()));
+    console.log('OHLC Update');
+    const ohlc = await getOHLCData();
+    const allAOs = algoAO.getAllAOs(ohlc);
+    emitter.emit('AOupdate', allAOs);
+    reactive.emitter.emit('ohlcUpdate', ohlc);
+    reactive.emitter.emit('AOupdate', allAOs);
   });
-  algoAO.passMode(await determineMode(tradingSymbol));
+  emitter.on('tickerClose', async (data) => {
+    reactive.emitter.emit('tickerUpdate', data);
+  });
+  reactive.emitter.on('dataPrices', async () => {
+    const prices = await getPricesData();
+    reactive.emitter.emit('dataPricesResponse', prices);
+  });
+  const mode = await determineMode(tradingSymbol);
+  reactive.passMode(mode);
+  reactive.startReactive();
+  algoAO.passMode(mode);
   algoAO.startMLAO(tradingSymbol);
 }
 

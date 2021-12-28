@@ -34,6 +34,7 @@
     "isomorphic-ws": "^4.0.1",
     "kraken-api": "^1.0.1",
     "minmaxscaler": "^1.0.1",
+    "natural-spline-interpolator": "^1.0.2",
     "node-fetch": "^2.6.1",
     "nodeplotlib": "^0.7.6",
     "plotly": "^1.0.6",

@@ -25,7 +25,7 @@ const net = new brain.recurrent.LSTMTimeStep({
   outputSize: 10,
 });
 let scaledData = [];
-console.log(AO);
+// console.log(AO);
 try {
   scaledData = scaler.fit_transform(AO);
 } catch (err) {

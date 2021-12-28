@@ -116,6 +116,7 @@ async function getLastTrade(tradingSymbol, offset = 0) {
 async function collectData(tradingSymbol) {
   console.log(chalk.blue('Subscribing to OHLC/Ticker data'));
   krakenWebSocket.api('subscribe', 'ticker', [`${tradingSymbol}/USD`]); // Subscribe to ticker
+  krakenWebSocket.api('subscribe', 'spread', [`${tradingSymbol}/USD`]); // Subscribe to Spread
   const getOHLCIntervals = [1, 5, 15, 30, 60, 240];
   getOHLCIntervals.forEach((interval) => {
     krakenWebSocket.api('subscribe', 'ohlc', [`${tradingSymbol}/USD`], {
@@ -148,17 +149,18 @@ async function collectData(tradingSymbol) {
       if (messageData[2].includes('ohlc')) {
         emitter.emit('ohlcUpdate', messageData[2]);
         // console.log(messageData[2]);
-        if (dataStorage.ohlc[messageData[2]].time < parseFloat(messageData[1][1])) {
-          dataStorage.ohlc[messageData[2]].time = parseFloat(messageData[1][1]);
+        if (dataStorage.ohlc[messageData[2]].time.time < parseFloat(messageData[1][1])) {
+          const newData = {
+            time: parseFloat(messageData[1][1]),
+            open: parseFloat(messageData[1][2]),
+            high: parseFloat(messageData[1][3]),
+            low: parseFloat(messageData[1][4]),
+            close: parseFloat(messageData[1][5]),
+            volume: parseFloat(messageData[1][7]),
+          };
+          dataStorage.ohlc[messageData[2]].time = newData;
           dataStorage.ohlc[messageData[2]].data.push(
-            {
-              time: parseFloat(messageData[1][1]),
-              open: parseFloat(messageData[1][2]),
-              high: parseFloat(messageData[1][3]),
-              low: parseFloat(messageData[1][4]),
-              close: parseFloat(messageData[1][5]),
-              volume: parseFloat(messageData[1][7]),
-            },
+            newData,
           );
         } else {
           dataStorage.ohlc[messageData[2]]
@@ -172,6 +174,21 @@ async function collectData(tradingSymbol) {
             };
         }
       }
+      // if (messageData[2].includes('spread')) {
+      //   console.log(messageData[1]);
+      // }
+    }
+  });
+}
+
+// Clean dataStorage when memory is low
+function cleanDataStorage() {
+  if (dataStorage.prices.length > 1000) {
+    dataStorage.prices = dataStorage.prices.splice(dataStorage.prices.length - 1000);
+  }
+  Object.keys(dataStorage.ohlc).forEach((key) => {
+    if (dataStorage.ohlc[key].data.length > 1000) {
+      dataStorage.ohlc[key].data = dataStorage.ohlc[key].data.splice(dataStorage.ohlc[key].data.length - 1000);
     }
   });
 }
