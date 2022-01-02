@@ -36,7 +36,7 @@ let amount = 0;
 let limit = 0;
 let cnt = 0;
 let mode = '';
-
+const spread = document.getElementById('spread');
 const ticker = document.getElementById('ticker');
 const AO = document.getElementById('AO');
 const modeText = document.getElementById('mode');
@@ -140,6 +140,7 @@ ws.onmessage = function onMessage(evt) {
     const AOdata = [];
     const AOintervals = [1, 5, 15, 30, 60, 240];
     AOintervalsColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+    AOintervalsColorsDim = ['#082a42', '#8f490b', '#1e6b1e', '#750f10', '#502c70', '#5c3027'];
 
     AOintervals.forEach((interval, ite) => {
       const trace = {
@@ -149,10 +150,18 @@ ws.onmessage = function onMessage(evt) {
         yaxis: `y${ite + 1}`,
         xaxis: `x${ite + 1}`,
       };
+      const markerColor = [AOintervalsColors[ite]];
+      for (let i = 1; i < trace.y.length; i += 1) {
+        if (trace.y[i] >= trace.y[i - 1]) {
+          markerColor.push(AOintervalsColors[ite]);
+        } else {
+          markerColor.push(AOintervalsColorsDim[ite]);
+        }
+      }
       if (data.AO[`ohlc-${interval}-predict`] !== undefined) {
         trace.y.push(...data.AO[`ohlc-${interval}-predict`]);
         trace.marker = {};
-        trace.marker.color = [...Array(100).fill(AOintervalsColors[ite]), ...Array(10).fill('#c3ff0e')];
+        trace.marker.color = [...markerColor, ...Array(10).fill('#c3ff0e')];
       }
 
       AOdata.push(trace);
@@ -180,5 +189,22 @@ ws.onmessage = function onMessage(evt) {
         roworder: 'top to bottom',
       },
     });
+  } else if (data.spreadMomentum !== undefined) {
+    const spreadData = [
+      {
+        domain: { x: [0, 1], y: [0, 1] },
+        value: data.spreadMomentum,
+        title: { text: 'Spread Momentum' },
+        type: 'indicator',
+        mode: 'gauge+delta',
+        delta: { reference: 0, increasing: { color: '#00ff00' }, decreasing: { color: '#ff0000' } },
+        gauge: { axis: { range: [-2, 2] } },
+      },
+    ];
+
+    const layout = {
+      width: 600, height: 400, color: '#161f27', paper_bgcolor: '#161f27', plot_bgcolor: '#161f27', font: { color: '#dbdbdb' },
+    };
+    Plotly.react(spread, spreadData, layout);
   }
 };

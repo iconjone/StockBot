@@ -152,12 +152,17 @@ function predictLimit(mode) {
 
 async function predictAO(interval) {
   console.log('Started predicting AO for interval:', interval);
-  const child = fork('mlAO.js', [AOs[`ohlc-${interval}`], interval]);
+  let data = AOs[`ohlc-${interval}`];
+  if (interval === '240') { // HACKY SOLUTION TO WIERD ML RESULTS MAY NEED TO BE FIXED
+    // remove 1/4 of beginning of data due to extreme time
+    data = data.slice(data.length - (3 * (data.length / 4)));
+  }
+  const child = fork('mlAO.js', [data, interval]);
   child.on('message', (message) => {
     if (message.MLAO) {
       console.log('Received MLAO for interval:', message.MLAO.interval);
       AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
-
+      emitter.emit('predictAO', AOs);
       emitter.emit('limitPredict', predictLimit(mode));
 
       // console.log('Predicted AO for interval: ', message.MLAO.interval, '\n', message.MLAO.AO);
@@ -177,14 +182,14 @@ async function predictAO(interval) {
 function startMLAO() {
   if (AOs['ohlc-1'].length > 0 && AOs['ohlc-5'].length > 0 && AOs['ohlc-15'].length > 0 && AOs['ohlc-30'].length > 0 && AOs['ohlc-60'].length > 0 && AOs['ohlc-240'].length > 0) {
     console.log('Started MLAO');
-    predictAO('1');
-    predictAO('5');
-    predictAO('15');
-    // predictAO('240');
+    // predictAO('1');
+    // predictAO('5');
+    // predictAO('15');
+    // predictAO('60');
 
-    // intervals.forEach((interval) => {
-    //   predictAO(interval);
-    // });
+    intervals.forEach((interval) => {
+      predictAO(interval);
+    });
 
     timer = setInterval(() => {
       predictAO('1');

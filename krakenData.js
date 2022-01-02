@@ -174,9 +174,10 @@ async function collectData(tradingSymbol) {
             };
         }
       }
-      // if (messageData[2].includes('spread')) {
-      //   console.log(messageData[1]);
-      // }
+      if (messageData[2].includes('spread')) {
+        // console.log(messageData[1]);
+        emitter.emit('spreadUpdate', messageData[1]);
+      }
     }
   });
 }

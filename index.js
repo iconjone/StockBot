@@ -8,6 +8,8 @@ const orderCalculator = require('./orderCalculator');
 
 const tradingSymbol = process.env.TRADINGSYMBOL;
 
+const spreadHolder = [];
+
 function startEmitters() {
   krakenData.emitter.on('tickerClose', (data) => {
   // console.log("there's data", data);
@@ -18,6 +20,26 @@ function startEmitters() {
   krakenData.emitter.on('ohlcUpdate', (data) => {
     if (data === 'ohlc-240') {
       orderCalculator.emitter.emit('ohlcUpdate');
+    }
+  });
+  const multiplier = 50;
+  const big = multiplier * 45;
+  const small = multiplier * 5;
+
+  krakenData.emitter.on('spreadUpdate', (data) => {
+    const average = (parseFloat(data[0]) + parseFloat(data[1])) / 2;
+    if (spreadHolder.length > big) {
+      spreadHolder.shift();
+      spreadHolder.push(average);
+    } else {
+      spreadHolder.push(average);
+    }
+    // calculate average of last 34 spread values - average of last 5 spread values
+    const spreadAverageBig = spreadHolder.reduce((a, b) => a + b, 0) / spreadHolder.length;
+    const spreadAverageSmall = spreadHolder.slice(small * -1).reduce((a, b) => a + b, 0) / small;
+    // console.log();
+    if (spreadHolder.length > big) {
+      websocketServer.wss.broadcast({ spreadMomentum: spreadAverageBig - spreadAverageSmall });
     }
   });
 

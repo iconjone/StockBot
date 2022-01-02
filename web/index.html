@@ -1,15 +1,70 @@
 <html>
     <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta charset="utf-8" />
+    <title>
+        CryptoBot
+    </title>
     <script src="https://cdn.plot.ly/plotly-2.6.3.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+
+        }
+    </style>
     </head>
     <body style=" max-width: 90%;">
-    <div class="navbar"><span>CryptoBot - JS</span></div>
+    <div class="navbar"><span>CryptoBot - Jonathan Samuel </span></div>
     <h2 id="mode">Mode: </h2>
-    <h4 id="profit"></h2>
-    <div class="wrapper">
+    <h4 id="profit"></h4>
+    <table>
+        <tr>
+            <th>
+                <div>Interval 1</div>
+            </th>
+            <th>
+                <div>Interval 5</div>
+            </th>
+            <th>
+                <div>Interval 15</div>
+            </th>
+            <th>
+                <div>Interval 30</div>
+            </th>
+            <th>
+                <div>Interval 60</div>
+            </th>
+            <th>
+                <div>Interval 240</div>
+            </th>
+        </tr>
+        <tr>
+            <td>
+                <div>Interval 1</div>
+            </td>
+            <td>
+                <div>Interval 5</div>
+            </td>
+            <td>
+                <div>Interval 15</div>
+            </td>
+            <td>
+                <div>Interval 30</div>
+            </td>
+            <td>
+                <div>Interval 60</div>
+            </td>
+            <td>
+                <div>Interval 240</div>
+            </td>
+        </tr>
 
+    </table>
+    <div class="wrapper">
+        <div id="spread"></div>
         <div id="ticker"></div>
         <div id="AO"></div>
 
