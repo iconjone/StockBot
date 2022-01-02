@@ -17,6 +17,20 @@ const trajectory = {
   240: { motion: '', slope: 0, crossIndex: 0 },
 };
 
+const peaksAndValleys = {
+  1: { average: 0, data: [] },
+  5: { average: 0, data: [] },
+  15: { average: 0, data: [] },
+  30: { average: 0, data: [] },
+  60: { average: 0, data: [] },
+  240: { average: 0, data: [] },
+};
+
+let mode = '';
+
+let ohlcStore = {};
+let AOStore = {};
+
 async function determineMode(tradingSymbol) {
   emitter.emit('data', { request: 'balance' });
   return new Promise((resolve) => {
@@ -62,6 +76,33 @@ async function getPricesData() {
       resolve(data);
     });
   });
+}
+
+function estimateLimitPrice() {
+  if (Object.keys(ohlcStore).length > 0 || Object.keys(AOStore).length > 0) {
+    let largestInterval = '240';
+    for (let i = intervals.length - 1; i >= 0; i--) {
+      if (
+        (trajectory[intervals[i]].motion === 'bearish' && mode === 'buy')
+      || (trajectory[intervals[i]].motion === 'bullish' && mode === 'sell')
+      ) {
+        largestInterval = intervals[i];
+        break;
+      }
+    }
+    const largestIntervalDifference = peaksAndValleys[largestInterval].average;
+    // get corresponding price from OHLC with cross index
+    const largestIntervalOHLC = ohlcStore[`ohlc-${largestInterval}`].data;
+    const largestIntervalPrice = largestIntervalOHLC[
+      largestIntervalOHLC.length
+        - (AOStore[`ohlc-${largestInterval}`].length - trajectory[largestInterval].crossIndex)
+    ].close;
+    const estimatedLimitPrice = mode === 'buy'
+      ? largestIntervalPrice - largestIntervalDifference
+      : largestIntervalPrice + largestIntervalDifference;
+    console.log(estimatedLimitPrice, largestInterval);
+    emitter.emit('limitPredict', estimatedLimitPrice);
+  }
 }
 
 function AOcalculator(AO) {
@@ -110,7 +151,7 @@ function AOcalculator(AO) {
       trajectory[interval].crossIndex = indexOfCross;
     }
 
-    // Pure buy or sell
+    // Pure buy or sell - Move to reactive
     if (
       AOdata[AOdata.length - 1] < 0
       && AOdata[AOdata.length - 2] < AOdata[AOdata.length - 1]
@@ -127,6 +168,7 @@ function AOcalculator(AO) {
     }
   });
   console.log(trajectory);
+  estimateLimitPrice();
 }
 
 function OHLCCalculator(ohlc) {
@@ -179,8 +221,11 @@ function OHLCCalculator(ohlc) {
     // console.log(OHLCPeaksValleys);
     const differences = OHLCPeaksValleys.map((item) => item.difference);
     const averageDifference = differences.reduce((a, b) => a + b, 0) / differences.length;
-    console.log(averageDifference, interval);
+    peaksAndValleys[interval].data = OHLCPeaksValleys;
+    peaksAndValleys[interval].average = averageDifference;
   });
+  console.log(peaksAndValleys);
+  estimateLimitPrice();
 }
 
 algoAO.emitter.on('limitPredict', (prediction) => {
@@ -207,6 +252,8 @@ async function startCalculations(tradingSymbol) {
     // console.log('OHLC Update');
     const ohlc = await getOHLCData();
     const allAOs = algoAO.getAllAOs(ohlc);
+    ohlcStore = ohlc;
+    AOStore = allAOs;
     emitter.emit('AOupdate', allAOs);
     AOcalculator(allAOs);
     OHLCCalculator(ohlc);
@@ -220,7 +267,7 @@ async function startCalculations(tradingSymbol) {
     const prices = await getPricesData();
     reactive.emitter.emit('dataPricesResponse', prices);
   });
-  const mode = await determineMode(tradingSymbol);
+  mode = await determineMode(tradingSymbol);
   reactive.passMode(mode);
   reactive.startReactive();
   algoAO.passMode(mode);
