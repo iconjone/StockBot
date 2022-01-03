@@ -1,12 +1,12 @@
 const { EventEmitter } = require('events');
+const Taira = require('taira');
+
 const algoAO = require('./algoAO');
 const reactive = require('./reactive');
 
 const emitter = new EventEmitter();
 
 const intervals = [1, 5, 15, 30, 60, 240];
-
-const Taira = require('taira');
 
 const trajectory = {
   1: { motion: '', slope: 0, crossIndex: 0 },
@@ -25,6 +25,17 @@ const peaksAndValleys = {
   60: { average: 0, data: [] },
   240: { average: 0, data: [] },
 };
+
+let TORpredictions = {
+  1: { price: -1, time: -1 },
+  5: { price: -1, time: -1 },
+  15: { price: -1, time: -1 },
+  30: { price: -1, time: -1 },
+  60: { price: -1, time: -1 },
+  240: { price: -1, time: -1 },
+};
+
+let OHLCpredictedLimit = { price: -1, interval: -1 };
 
 let mode = '';
 
@@ -80,11 +91,16 @@ async function getPricesData() {
 
 function estimateLimitPrice() {
   if (Object.keys(ohlcStore).length > 0 || Object.keys(AOStore).length > 0) {
+    const lastPrice = ohlcStore[`ohlc-${intervals[0]}`].data[0].close;
     let largestInterval = '240';
-    for (let i = intervals.length - 1; i >= 0; i--) {
+    for (let i = intervals.length - 1; i >= 0; i -= 1) {
       if (
-        (trajectory[intervals[i]].motion === 'bearish' && mode === 'buy')
-      || (trajectory[intervals[i]].motion === 'bullish' && mode === 'sell')
+        (trajectory[intervals[i]].motion === 'bearish'
+          && peaksAndValleys[intervals[i]] / lastPrice > 0.0075
+          && mode === 'buy')
+        || (trajectory[intervals[i]].motion === 'bullish'
+          && peaksAndValleys[intervals[i]] / lastPrice > 0.0075
+          && mode === 'sell')
       ) {
         largestInterval = intervals[i];
         break;
@@ -95,13 +111,17 @@ function estimateLimitPrice() {
     const largestIntervalOHLC = ohlcStore[`ohlc-${largestInterval}`].data;
     const largestIntervalPrice = largestIntervalOHLC[
       largestIntervalOHLC.length
-        - (AOStore[`ohlc-${largestInterval}`].length - trajectory[largestInterval].crossIndex)
+          - (AOStore[`ohlc-${largestInterval}`].length
+            - trajectory[largestInterval].crossIndex)
     ].close;
     const estimatedLimitPrice = mode === 'buy'
       ? largestIntervalPrice - largestIntervalDifference
       : largestIntervalPrice + largestIntervalDifference;
     console.log(estimatedLimitPrice, largestInterval);
-    emitter.emit('limitPredict', estimatedLimitPrice);
+    OHLCpredictedLimit = {
+      price: estimatedLimitPrice,
+      interval: largestInterval,
+    };
   }
 }
 
@@ -168,7 +188,7 @@ function AOcalculator(AO) {
     }
   });
   console.log(trajectory);
-  estimateLimitPrice();
+  assessInput();
 }
 
 function OHLCCalculator(ohlc) {
@@ -225,25 +245,82 @@ function OHLCCalculator(ohlc) {
     peaksAndValleys[interval].average = averageDifference;
   });
   console.log(peaksAndValleys);
+}
+
+function assessInput() {
+  // Runs basicall on each tick
   estimateLimitPrice();
+  let limitPrice = OHLCpredictedLimit.price;
+  const lowestIntervals = [];
+  intervals.forEach((interval) => {
+    const trajectoryData = trajectory[interval];
+    if (trajectoryData.motion === 'bullish' && mode === 'buy') {
+      lowestIntervals.push(interval);
+    }
+    if (trajectoryData.motion === 'bearish' && mode === 'sell') {
+      lowestIntervals.push(interval);
+    }
+  });
+  const projectedPrices = [];
+  if (lowestIntervals.length > 0) {
+    lowestIntervals.forEach((interval) => {
+      const trajectoryData = trajectory[interval];
+      const torPrediction = TORpredictions[interval];
+      if (torPrediction.price !== -1) {
+        // project price with trajectory slope and tor time
+        const projectedPrice = trajectoryData.slope * (torPrediction.time / interval)
+          + ohlcStore[`ohlc-${interval}`].data[
+            ohlcStore[`ohlc-${interval}`].data.length - 1
+          ].close;
+        projectedPrices.push(projectedPrice);
+      }
+    });
+  }
+  if (projectedPrices.length > 0) {
+    const projectedPrice = projectedPrices.reduce((a, b) => a + b, 0) / projectedPrices.length;
+    console.log('projected Price', projectedPrice);
+    // average into limit price
+    // figure out averaging weights based on strength of the signal
+    let averageWeight = 0;
+    for (let i = 0; i < lowestIntervals.length; i++) {
+      if (lowestIntervals[i] < OHLCpredictedLimit.interval) {
+        averageWeight += peaksAndValleys[lowestIntervals[i]].average;
+      }
+    }
+    if (averageWeight !== 0) {
+      averageWeight /= peaksAndValleys[OHLCpredictedLimit.interval].average;
+    }
+    if (averageWeight > 1) {
+      averageWeight = 1 - averageWeight;
+    }
+    if (averageWeight === 0) {
+      averageWeight = 0.25;
+    }
+
+    limitPrice = projectedPrice * averageWeight
+      + OHLCpredictedLimit.price * (1 - averageWeight);
+  }
+
+  emitter.emit('limitPredict', limitPrice);
 }
 
 algoAO.emitter.on('limitPredict', (prediction) => {
   reactive.emitter.emit('limitPredict', prediction);
-  console.log('Limit Predict', prediction);
-  // average any limits that are not -1
-  let average = 0;
-  let count = 0;
-  intervals.forEach((interval) => {
-    if (prediction[interval].price !== -1) {
-      average += prediction[interval].price;
-      count += 1;
-    }
-  });
-  average /= count;
-  if (count !== 0) {
-    emitter.emit('limitPredict', average);
-  }
+  TORpredictions = prediction;
+  // console.log('Limit Predict', prediction);
+  // // average any limits that are not -1
+  // let average = 0;
+  // let count = 0;
+  // intervals.forEach((interval) => {
+  //   if (prediction[interval].price !== -1) {
+  //     average += prediction[interval].price;
+  //     count += 1;
+  //   }
+  // });
+  // average /= count;
+  // if (count !== 0) {
+  //   emitter.emit('limitPredict', average);
+  // }
 });
 
 async function startCalculations(tradingSymbol) {
