@@ -2,7 +2,6 @@ const { EventEmitter } = require('events');
 
 const emitter = new EventEmitter();
 const interpolator = require('natural-spline-interpolator');
-const { bullish, bearish } = require('technicalindicators');
 
 let mode = '';
 const intervals = [1, 5, 15, 30, 60, 240];
@@ -12,46 +11,34 @@ function passMode(pass) {
 }
 
 function ohlcExtrapolate(data) {
-  //   const ohlc = data[`ohlc-${intervals[0]}`];
-  //   const highOhlc = ohlc.data.map((item, index) => [index, item.high]);
-  //   const lowOhlc = ohlc.data.map((item, index) => [index, item.low]);
-  //   //   console.log(highOhlc);
-  //   //   console.log(lowOhlc);
-  //   highOhlc.push([800, 3956]);
-  //   lowOhlc.push([800, 3956]);
-  //   highFunction = interpolator(highOhlc);
-  //   lowFunction = interpolator(lowOhlc);
-  //   console.log(highFunction(721), highFunction(722), highFunction(723));
-  //   console.log(lowFunction(721), lowFunction(722), lowFunction(723));
   intervals.forEach((interval) => {
     const ohlc = data[`ohlc-${interval}`];
     const highOhlc = ohlc.data.map((item, index) => [item.high]);
     const lowOhlc = ohlc.data.map((item, index) => [item.low]);
     const closeOhlc = ohlc.data.map((item, index) => [item.close]);
     const openOhlc = ohlc.data.map((item, index) => [item.open]);
-    // console.log(closeOhlc.slice(-15));
-    const isBull = bullish({
-      open: openOhlc.slice(-50),
-      high: highOhlc.slice(-50),
-      low: lowOhlc.slice(-50),
-      close: closeOhlc.slice(-50),
-    });
-    const isBear = bearish({
-      open: openOhlc.slice(-50),
-      high: highOhlc.slice(-50),
-      low: lowOhlc.slice(-50),
-      close: closeOhlc.slice(-50),
-    });
-    // console.log(isBull, isBear);
-    // console.log(isBull);
-    // console.log(isBull ? `bullish: ${interval}` : '');
-    // console.log(isBear ? `bearish: ${interval}` : '');
-    // if (isBull) {
-    //   console.log(`bullish: ${interval}`);
-    // }
-    // if (isBear) {
-    //   console.log(`bearish: ${interval}`);
-    // }
+  });
+}
+
+function AOreact(AO) {
+  intervals.forEach((interval) => {
+    const AOdata = AO[`ohlc-${interval}`];
+
+    // Pure buy or sell - Move to reactive
+    if (
+      AOdata[AOdata.length - 1] < 0
+        && AOdata[AOdata.length - 2] < AOdata[AOdata.length - 1]
+        && AOdata[AOdata.length - 3] > AOdata[AOdata.length - 2]
+    ) {
+      console.log('buy', interval, Date.now());
+    }
+    if (
+      AOdata[AOdata.length - 1] > 0
+        && AOdata[AOdata.length - 2] > AOdata[AOdata.length - 1]
+        && AOdata[AOdata.length - 3] < AOdata[AOdata.length - 2]
+    ) {
+      console.log('sell', interval, Date.now());
+    }
   });
 }
 
@@ -66,7 +53,7 @@ function startReactive() {
   });
   emitter.on('AOupdate', (AO) => {
     // console.log(AO);
-
+    AOreact(AO);
   });
   emitter.on('tickerUpdate', (ticker) => {
     console.log(ticker);

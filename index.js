@@ -2,11 +2,14 @@
 require('dotenv').config();
 const express = require('express');
 const chalk = require('chalk');
+const moment = require('moment');
+const fs = require('fs');
+
 const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
 const orderCalculator = require('./orderCalculator');
 
-const tradingSymbol = process.env.TRADINGSYMBOL;
+const tradingSymbol = process.env.TRADING_SYMBOL;
 
 const spreadHolder = [];
 
@@ -83,7 +86,13 @@ function startEmitters() {
   });
 
   orderCalculator.emitter.on('limitPredict', (data) => {
-    websocketServer.wss.broadcast({ limit: data });
+    const limit = data;
+    fs.readFile('limitPredictions.txt', (err, data) => {
+      const newData = { price: limit, time: moment().format('MMMM Do YYYY, h:mm:ss a'), mode: orderCalculator.mode };
+      data += `${JSON.stringify(newData)}\n`;
+      fs.writeFile('limitPredictions.txt', data, ((err) => { }));
+    });
+    websocketServer.wss.broadcast({ limit });
   });
 }
 

@@ -46,6 +46,8 @@ async function determineMode(tradingSymbol) {
   emitter.emit('data', { request: 'balance' });
   return new Promise((resolve) => {
     emitter.once('balanceResponse', (balance) => {
+      // force mode
+      // resolve('buy');
       if (balance[tradingSymbol] !== undefined) {
         resolve('sell');
       }
@@ -94,12 +96,13 @@ function estimateLimitPrice() {
     const lastPrice = ohlcStore[`ohlc-${intervals[0]}`].data[0].close;
     let largestInterval = '240';
     for (let i = intervals.length - 1; i >= 0; i -= 1) {
+      console.log(peaksAndValleys[intervals[i]].average, lastPrice);
       if (
         (trajectory[intervals[i]].motion === 'bearish'
-          && peaksAndValleys[intervals[i]] / lastPrice > 0.0075
+          && peaksAndValleys[intervals[i]].average / lastPrice > 0.0030
           && mode === 'buy')
         || (trajectory[intervals[i]].motion === 'bullish'
-          && peaksAndValleys[intervals[i]] / lastPrice > 0.0075
+          && peaksAndValleys[intervals[i]].average / lastPrice > 0.0030
           && mode === 'sell')
       ) {
         largestInterval = intervals[i];
@@ -170,22 +173,6 @@ function AOcalculator(AO) {
         / (AOdata.length - indexOfCross);
       trajectory[interval].crossIndex = indexOfCross;
     }
-
-    // Pure buy or sell - Move to reactive
-    if (
-      AOdata[AOdata.length - 1] < 0
-      && AOdata[AOdata.length - 2] < AOdata[AOdata.length - 1]
-      && AOdata[AOdata.length - 3] > AOdata[AOdata.length - 2]
-    ) {
-      console.log('buy', interval, Date.now());
-    }
-    if (
-      AOdata[AOdata.length - 1] > 0
-      && AOdata[AOdata.length - 2] > AOdata[AOdata.length - 1]
-      && AOdata[AOdata.length - 3] < AOdata[AOdata.length - 2]
-    ) {
-      console.log('sell', interval, Date.now());
-    }
   });
   console.log(trajectory);
   assessInput();
@@ -244,7 +231,7 @@ function OHLCCalculator(ohlc) {
     peaksAndValleys[interval].data = OHLCPeaksValleys;
     peaksAndValleys[interval].average = averageDifference;
   });
-  console.log(peaksAndValleys);
+  console.log(intervals.map((interval) => peaksAndValleys[interval].average));
 }
 
 function assessInput() {
@@ -296,7 +283,7 @@ function assessInput() {
     if (averageWeight === 0) {
       averageWeight = 0.25;
     }
-
+    console.log('averageWeight', averageWeight, 'projectedPrices', projectedPrices);
     limitPrice = projectedPrice * averageWeight
       + OHLCpredictedLimit.price * (1 - averageWeight);
   }
@@ -356,4 +343,5 @@ module.exports = {
   determineMode,
   calculateBreakEvenBeforeSell,
   startCalculations,
+  mode,
 };
