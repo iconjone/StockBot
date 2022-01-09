@@ -49,7 +49,7 @@ function startReactive() {
     ohlcExtrapolate(ohlc);
   });
   emitter.on('limitPredict', (limit) => {
-    // console.log(limit);
+    console.log(limit);
   });
   emitter.on('AOupdate', (AO) => {
     // console.log(AO);

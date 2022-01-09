@@ -182,14 +182,14 @@ async function predictAO(interval) {
 function startMLAO() {
   if (AOs['ohlc-1'].length > 0 && AOs['ohlc-5'].length > 0 && AOs['ohlc-15'].length > 0 && AOs['ohlc-30'].length > 0 && AOs['ohlc-60'].length > 0 && AOs['ohlc-240'].length > 0) {
     console.log('Started MLAO');
-    // predictAO('1');
+    predictAO('1');
     // predictAO('5');
-    // predictAO('15');
-    // predictAO('60');
+    predictAO('15');
+    predictAO('60');
 
-    intervals.forEach((interval) => {
-      predictAO(interval);
-    });
+    // intervals.forEach((interval) => {
+    //   predictAO(interval);
+    // });
 
     timer = setInterval(() => {
       predictAO('1');

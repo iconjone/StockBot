@@ -47,7 +47,7 @@ async function determineMode(tradingSymbol) {
   return new Promise((resolve) => {
     emitter.once('balanceResponse', (balance) => {
       // force mode
-      // resolve('buy');
+      resolve('buy');
       if (balance[tradingSymbol] !== undefined) {
         resolve('sell');
       }
@@ -96,13 +96,13 @@ function estimateLimitPrice() {
     const lastPrice = ohlcStore[`ohlc-${intervals[0]}`].data[0].close;
     let largestInterval = '240';
     for (let i = intervals.length - 1; i >= 0; i -= 1) {
-      console.log(peaksAndValleys[intervals[i]].average, lastPrice);
+      // console.log(peaksAndValleys[intervals[i]].average, lastPrice);
       if (
         (trajectory[intervals[i]].motion === 'bearish'
-          && peaksAndValleys[intervals[i]].average / lastPrice > 0.0030
+          && peaksAndValleys[intervals[i]].average / lastPrice > 0.003
           && mode === 'buy')
         || (trajectory[intervals[i]].motion === 'bullish'
-          && peaksAndValleys[intervals[i]].average / lastPrice > 0.0030
+          && peaksAndValleys[intervals[i]].average / lastPrice > 0.003
           && mode === 'sell')
       ) {
         largestInterval = intervals[i];
@@ -120,7 +120,7 @@ function estimateLimitPrice() {
     const estimatedLimitPrice = mode === 'buy'
       ? largestIntervalPrice - largestIntervalDifference
       : largestIntervalPrice + largestIntervalDifference;
-    console.log(estimatedLimitPrice, largestInterval);
+    // console.log(estimatedLimitPrice, largestInterval);
     OHLCpredictedLimit = {
       price: estimatedLimitPrice,
       interval: largestInterval,
@@ -174,7 +174,7 @@ function AOcalculator(AO) {
       trajectory[interval].crossIndex = indexOfCross;
     }
   });
-  console.log(trajectory);
+  // console.log(trajectory);
   assessInput();
 }
 
@@ -231,7 +231,7 @@ function OHLCCalculator(ohlc) {
     peaksAndValleys[interval].data = OHLCPeaksValleys;
     peaksAndValleys[interval].average = averageDifference;
   });
-  console.log(intervals.map((interval) => peaksAndValleys[interval].average));
+  // console.log(intervals.map((interval) => peaksAndValleys[interval].average));
 }
 
 function assessInput() {
@@ -265,7 +265,7 @@ function assessInput() {
   }
   if (projectedPrices.length > 0) {
     const projectedPrice = projectedPrices.reduce((a, b) => a + b, 0) / projectedPrices.length;
-    console.log('projected Price', projectedPrice);
+    // console.log('projected Price', projectedPrice);
     // average into limit price
     // figure out averaging weights based on strength of the signal
     let averageWeight = 0;
@@ -283,11 +283,18 @@ function assessInput() {
     if (averageWeight === 0) {
       averageWeight = 0.25;
     }
-    console.log('averageWeight', averageWeight, 'projectedPrices', projectedPrices);
+    // console.log('averageWeight', averageWeight, 'projectedPrices', projectedPrices);
     limitPrice = projectedPrice * averageWeight
       + OHLCpredictedLimit.price * (1 - averageWeight);
   }
-
+  reactive.emitter.emit('limitPredict', {
+    limitPrice,
+    trajectory,
+    peaksAndValleys,
+    TORpredictions,
+    OHLCpredictedLimit,
+    extraIntervals: lowestIntervals,
+  });
   emitter.emit('limitPredict', limitPrice);
 }
 
