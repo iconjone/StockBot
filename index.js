@@ -4,7 +4,6 @@ const express = require('express');
 const chalk = require('chalk');
 const moment = require('moment');
 const fs = require('fs');
-const fetch = require('node-fetch');
 
 const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
@@ -13,33 +12,11 @@ const orderCalculator = require('./orderCalculator');
 const tradingSymbol = process.env.TRADING_SYMBOL;
 
 const spreadHolder = [];
-let oldLimit = 0;
-function sendDiscordMessage(price) {
-  // if the price is different than the old price by $5 or more
-  if (Math.abs(price - oldLimit) >= 5) {
-    fetch(
-      'https://discord.com/api/webhooks/929162198012538941/1_iTlZpngELQq9721fXZfLaM9ZKmpdSASYvLduAXJOon0AK85ArWo31WYYwfHWeWyrC9',
-      {
-        method: 'post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-        // the username to be displayed
-          username: `Limit Predict - buy :${tradingSymbol}`,
-          // contents of the message to be sent
-          content: `Buy at $${price}`,
-
-        }),
-      },
-    );
-    oldLimit = price;
-  }
-}
 
 function startEmitters() {
   krakenData.emitter.on('tickerClose', (data) => {
   // console.log("there's data", data);
+    lastPrice = data;
     websocketServer.wss.broadcast({ tickerClose: data });
     orderCalculator.emitter.emit('tickerClose', data);
   });
@@ -117,7 +94,6 @@ function startEmitters() {
       fs.writeFile('limitPredictions.txt', data, ((err) => { }));
     });
     websocketServer.wss.broadcast({ limit });
-    sendDiscordMessage(limit);
   });
 }
 

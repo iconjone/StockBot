@@ -18,12 +18,12 @@ const trajectory = {
 };
 
 const peaksAndValleys = {
-  1: { average: 0, data: [] },
-  5: { average: 0, data: [] },
-  15: { average: 0, data: [] },
-  30: { average: 0, data: [] },
-  60: { average: 0, data: [] },
-  240: { average: 0, data: [] },
+  1: { average: 0, data: [], averageSlope: 0 },
+  5: { average: 0, data: [], averageSlope: 0 },
+  15: { average: 0, data: [], averageSlope: 0 },
+  30: { average: 0, data: [], averageSlope: 0 },
+  60: { average: 0, data: [], averageSlope: 0 },
+  240: { average: 0, data: [], averageSlope: 0 },
 };
 
 let TORpredictions = {
@@ -200,6 +200,7 @@ function OHLCCalculator(ohlc) {
     let isValleyFound = false;
     let peak = -1;
     let valley = -1;
+    let valleyIndex = -1;
     for (let i = 1; i < smoothedData.length - 2; i += 1) {
       if (
         smoothedData[i] < smoothedData[i + 1]
@@ -208,6 +209,7 @@ function OHLCCalculator(ohlc) {
       ) {
         isValleyFound = true;
         valley = smoothedData[i];
+        valleyIndex = i;
       }
       if (
         smoothedData[i] > smoothedData[i + 1]
@@ -219,7 +221,9 @@ function OHLCCalculator(ohlc) {
         peak = smoothedData[i];
       }
       if (isPeakFound && isValleyFound) {
-        OHLCPeaksValleys.push({ peak, valley, difference: peak - valley });
+        OHLCPeaksValleys.push({
+          peak, valley, difference: peak - valley, slope: (peak - valley) / (i - valleyIndex),
+        });
         isPeakFound = false;
         isValleyFound = false;
       }
@@ -228,8 +232,11 @@ function OHLCCalculator(ohlc) {
     // console.log(OHLCPeaksValleys);
     const differences = OHLCPeaksValleys.map((item) => item.difference);
     const averageDifference = differences.reduce((a, b) => a + b, 0) / differences.length;
+    const slopes = OHLCPeaksValleys.map((item) => item.slope);
+    const averageSlope = slopes.reduce((a, b) => a + b, 0) / slopes.length;
     peaksAndValleys[interval].data = OHLCPeaksValleys;
     peaksAndValleys[interval].average = averageDifference;
+    peaksAndValleys[interval].averageSlope = averageSlope;
   });
   // console.log(intervals.map((interval) => peaksAndValleys[interval].average));
 }
