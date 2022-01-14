@@ -33,6 +33,15 @@ let trajectory = {
   240: { motion: '', slope: 0, crossIndex: 0 },
 };
 
+let peaksAndValleys = {
+  1: { average: 0, data: [], averageSlope: 0 },
+  5: { average: 0, data: [], averageSlope: 0 },
+  15: { average: 0, data: [], averageSlope: 0 },
+  30: { average: 0, data: [], averageSlope: 0 },
+  60: { average: 0, data: [], averageSlope: 0 },
+  240: { average: 0, data: [], averageSlope: 0 },
+};
+
 const priceLimits = [];
 
 function passMode(pass) {
@@ -163,17 +172,34 @@ function AOreact(AO) {
     }
     const averageDifference = differences.reduce((a, b) => a + b, 0) / differences.length;
     const lastDifference = lastData[lastData.length - 1] - lastData[lastData.length - 2];
-    const percentageDiff = (Math.abs(lastDifference) - Math.abs(averageDifference)) / averageDifference;
-    console.log(interval, averageDifference, lastDifference, percentageDiff);
+    const percentageDiff = (Math.abs(lastDifference) - Math.abs(averageDifference))
+     / averageDifference;
+    const immediateMotion = lastDifference > 0 ? 'bullish' : 'bearish';
+    const { motion } = trajectory[interval];
+    const type = {};
+    if (motion !== immediateMotion) {
+      type.motion = 'reversal';
+    } else {
+      type.motion = 'continue';
+    }
+    if (Math.abs(percentageDiff) > 0.2) { // Over 20% changes means not moderate
+      if (averageDifference > Math.abs(lastDifference)) {
+        type.strength = 'weak';
+      } else {
+        type.strength = 'strong';
+      }
+    } else {
+      type.strength = 'moderate';
+    }
+
     intervalState[interval] = {
       averageDifference,
       lastDifference,
       percentageDiff,
+      immediateMotion,
+      motion,
+      type,
     };
-
-    if (Math.abs(percentageDiff) > 0.3) { // 30% difference
-      console.log("It's a buy or sell", interval, Date.now());
-    }
 
     // interpolate the data and see if reversals occur
     lastData = lastData.map((item, index) => [index, item]);
@@ -188,11 +214,14 @@ function AOreact(AO) {
   });
   const reactData = intervals.map((interval) => ({
     interval,
-    motion: trajectory[interval].motion,
+    motion: intervalState[interval].motion,
     averageDifference: intervalState[interval].averageDifference,
     lastDifference: intervalState[interval].lastDifference,
     percentageDiff: intervalState[interval].percentageDiff,
-    immediateMotion: intervalState[interval].lastDifference > 0 ? 'bullish' : 'bearish',
+    immediateMotion: intervalState[interval].immediateMotion,
+    type: intervalState[interval].type,
+    averagePriceDifference: peaksAndValleys[interval].average,
+
   }));
   emitter.emit('react', reactData);
   console.log(reactData);
@@ -207,6 +236,7 @@ function startReactive() {
   });
   emitter.on('limitPredict', (limit) => {
     trajectory = limit.trajectory;
+    peaksAndValleys = limit.peaksAndValleys;
     // console.log(limit);
     priceConditioning(limit);
   });

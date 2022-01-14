@@ -212,9 +212,9 @@ ws.onmessage = function onMessage(evt) {
       const rowInterval = row.interval;
       document.getElementById(`motion-${rowInterval}`).innerHTML = `${row.motion}`;
       document.getElementById(`immediate-motion-${rowInterval}`).innerHTML = `${row.immediateMotion}`;
-      document.getElementById(`average-difference-${rowInterval}`).innerHTML = `${row.averageDifference}`;
-      document.getElementById(`last-difference-${rowInterval}`).innerHTML = `${row.lastDifference}`;
-      document.getElementById(`percentage-difference-${rowInterval}`).innerHTML = `${row.percentageDiff}`;
+      document.getElementById(`percentage-difference-${rowInterval}`).innerHTML = `${(row.percentageDiff * 100).toFixed(2)}%`;
+      document.getElementById(`motion-type-${rowInterval}`).innerHTML = `${row.type.strength} ${row.type.motion}`;
+      document.getElementById(`average-difference-${rowInterval}`).innerHTML = `$${row.averagePriceDifference.toFixed(2)}`;
     });
   }
 };
