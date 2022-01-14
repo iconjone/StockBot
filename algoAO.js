@@ -9,7 +9,7 @@ const technicalindicators = require('technicalindicators');
 const helper = require('./helper');
 
 // const mlAO = require('./mlAO');
-let timer = null;
+const timer = null;
 
 let mode = '';
 
@@ -149,7 +149,7 @@ function predictLimit(mode) {
 }
 
 // return limit;
-
+const live = false;
 async function predictAO(interval) {
   console.log('Started predicting AO for interval:', interval);
   let data = AOs[`ohlc-${interval}`];
@@ -157,21 +157,33 @@ async function predictAO(interval) {
     // remove 1/4 of beginning of data due to extreme time
     data = data.slice(data.length - (3 * (data.length / 4)));
   }
-  const child = fork('mlAO.js', [data, interval]);
-  child.on('message', (message) => {
-    if (message.MLAO) {
-      console.log('Received MLAO for interval:', message.MLAO.interval);
-      AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
-      emitter.emit('predictAO', AOs);
-      emitter.emit('limitPredict', predictLimit(mode));
+  if (live) {
+    const child = fork('mlAO.js', [data, interval]);
+    child.on('message', (message) => {
+      if (message.MLAO) {
+        console.log('Received MLAO for interval:', message.MLAO.interval);
+        AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
+        emitter.emit('predictAO', AOs);
+        emitter.emit('limitPredict', predictLimit(mode));
 
       // console.log('Predicted AO for interval: ', message.MLAO.interval, '\n', message.MLAO.AO);
-    }
-  });
+      }
+    });
 
-  child.on('close', (code) => {
-    console.log(`child process exited with code ${code}`);
-  });
+    child.on('close', (code) => {
+      console.log(`child process exited with code ${code}`);
+    });
+  } else {
+    console.log('Received MLAO for interval:', interval);
+    // make fake predict data
+    const fakeData = [];
+    for (let i = 0; i < 20; i += 1) {
+      fakeData.push(data[data.length - (i + 1)] - (data[data.length - (i + 2)] - data[data.length - (i + 1)]));
+    }
+    AOs[`ohlc-${interval}-predict`] = fakeData;
+    emitter.emit('predictAO', AOs);
+    emitter.emit('limitPredict', predictLimit(mode));
+  }
   // const prediction = await mlAO.predict(AOs[`ohlc-${interval}`]);
   // AOs[`ohlc-${interval}-predict`] = prediction;
 
@@ -182,26 +194,26 @@ async function predictAO(interval) {
 function startMLAO() {
   if (AOs['ohlc-1'].length > 0 && AOs['ohlc-5'].length > 0 && AOs['ohlc-15'].length > 0 && AOs['ohlc-30'].length > 0 && AOs['ohlc-60'].length > 0 && AOs['ohlc-240'].length > 0) {
     console.log('Started MLAO');
-    predictAO('1');
-    // predictAO('5');
-    predictAO('15');
-    predictAO('60');
+    // predictAO('1');
+    // // predictAO('5');
+    // predictAO('15');
+    // predictAO('60');
 
-    // intervals.forEach((interval) => {
-    //   predictAO(interval);
-    // });
+    intervals.forEach((interval) => {
+      predictAO(interval);
+    });
 
-    timer = setInterval(() => {
-      predictAO('1');
-    }, 1000 * 60 * 5); // every 5 minutes predict AO for interval 1
+    // timer = setInterval(() => {
+    //   predictAO('1');
+    // }, 1000 * 60 * 5); // every 5 minutes predict AO for interval 1
 
-    setInterval(() => {
-      predictAO('5');
-    }, 1000 * 60 * 7); // every 7 minutes predict Interval 5
+    // setInterval(() => {
+    //   predictAO('5');
+    // }, 1000 * 60 * 7); // every 7 minutes predict Interval 5
 
-    setInterval(() => {
-      predictAO('15');
-    }, 1000 * 60 * 7); // every 7 minutes predict Interval 15
+    // setInterval(() => {
+    //   predictAO('15');
+    // }, 1000 * 60 * 7); // every 7 minutes predict Interval 15
 
     // setInterval(() => {
     //   predictAO('30');

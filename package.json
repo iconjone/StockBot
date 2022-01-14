@@ -7,8 +7,10 @@
     "test": "nodemon test.js",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
-    "start": "pm2 start index.js --max-memory-restart 45M  -f",
+    "start": "pm2 start index.js --max-memory-restart 500M  -f",
     "stop": "pm2 delete all",
+    "restart": "pm2 restart all",
+    "monit": "pm2 monit",
     "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M --exp-backoff-restart-delay=100 -f",
     "lint": "eslint . --fix"
   },

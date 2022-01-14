@@ -95,6 +95,10 @@ function startEmitters() {
     });
     websocketServer.wss.broadcast({ limit });
   });
+
+  orderCalculator.emitter.on('react', (data) => {
+    websocketServer.wss.broadcast({ react: data });
+  });
 }
 
 function startWebServer() {

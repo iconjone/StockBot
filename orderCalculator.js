@@ -345,6 +345,9 @@ async function startCalculations(tradingSymbol) {
     const prices = await getPricesData();
     reactive.emitter.emit('dataPricesResponse', prices);
   });
+  reactive.emitter.on('react', (data) => {
+    emitter.emit('react', data);
+  });
   mode = await determineMode(tradingSymbol);
   reactive.passMode(mode);
   reactive.startReactive();

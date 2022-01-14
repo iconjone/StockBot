@@ -7,6 +7,8 @@ const interpolator = require('natural-spline-interpolator');
 let mode = '';
 const intervals = [1, 5, 15, 30, 60, 240];
 
+let ohlcStore = {};
+
 const AOs = {
   'ohlc-1': [],
   'ohlc-5': [],
@@ -22,6 +24,15 @@ const AOs = {
   'ohlc-240-predict': [],
 };
 
+let trajectory = {
+  1: { motion: '', slope: 0, crossIndex: 0 },
+  5: { motion: '', slope: 0, crossIndex: 0 },
+  15: { motion: '', slope: 0, crossIndex: 0 },
+  30: { motion: '', slope: 0, crossIndex: 0 },
+  60: { motion: '', slope: 0, crossIndex: 0 },
+  240: { motion: '', slope: 0, crossIndex: 0 },
+};
+
 const priceLimits = [];
 
 function passMode(pass) {
@@ -29,21 +40,23 @@ function passMode(pass) {
 }
 
 function sendDiscordMessage(username, message) {
-  fetch(
-    'https://discord.com/api/webhooks/929162198012538941/1_iTlZpngELQq9721fXZfLaM9ZKmpdSASYvLduAXJOon0AK85ArWo31WYYwfHWeWyrC9',
-    {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  if (false) {
+    fetch(
+      'https://discord.com/api/webhooks/929162198012538941/1_iTlZpngELQq9721fXZfLaM9ZKmpdSASYvLduAXJOon0AK85ArWo31WYYwfHWeWyrC9',
+      {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
         // the username to be displayed
-        username,
-        // contents of the message to be sent
-        content: message,
-      }),
-    },
-  );
+          username,
+          // contents of the message to be sent
+          content: message,
+        }),
+      },
+    );
+  }
 }
 
 let oldLimit = 0;
@@ -123,7 +136,7 @@ function ohlcExtrapolate(data) {
 }
 
 function AOreact(AO) {
-  intervalState = {};
+  const intervalState = {};
   intervals.forEach((interval) => {
     const AOdata = AO[`ohlc-${interval}`];
 
@@ -142,16 +155,58 @@ function AOreact(AO) {
     ) {
       console.log('sell', interval, Date.now());
     }
+    let lastData = AOdata.slice(-30);
+    // get average difference between the last 30 data points
+    const differences = [];
+    for (let i = 0; i < lastData.length - 2; i += 1) {
+      differences.push(Math.abs(lastData[i] - lastData[i + 1]));
+    }
+    const averageDifference = differences.reduce((a, b) => a + b, 0) / differences.length;
+    const lastDifference = lastData[lastData.length - 1] - lastData[lastData.length - 2];
+    const percentageDiff = (Math.abs(lastDifference) - Math.abs(averageDifference)) / averageDifference;
+    console.log(interval, averageDifference, lastDifference, percentageDiff);
+    intervalState[interval] = {
+      averageDifference,
+      lastDifference,
+      percentageDiff,
+    };
+
+    if (Math.abs(percentageDiff) > 0.3) { // 30% difference
+      console.log("It's a buy or sell", interval, Date.now());
+    }
+
+    // interpolate the data and see if reversals occur
+    lastData = lastData.map((item, index) => [index, item]);
+    const lastDataInterpolated = interpolator(lastData);
+    // iterate from 21 to 40
+    for (let i = 31; i < 50; i += 1) {
+      // console.log(lastDataInterpolated(i));
+    }
+    if (lastDataInterpolated(45) > 0 && lastData[lastData.length - 1] < 0) {
+      console.log('thinks it will reverse', interval);
+    }
   });
+  const reactData = intervals.map((interval) => ({
+    interval,
+    motion: trajectory[interval].motion,
+    averageDifference: intervalState[interval].averageDifference,
+    lastDifference: intervalState[interval].lastDifference,
+    percentageDiff: intervalState[interval].percentageDiff,
+    immediateMotion: intervalState[interval].lastDifference > 0 ? 'bullish' : 'bearish',
+  }));
+  emitter.emit('react', reactData);
+  console.log(reactData);
 }
 
 function startReactive() {
   console.log('startReactive');
   emitter.on('ohlcUpdate', (ohlc) => {
     // console.log(ohlc);
+    ohlcStore = ohlc;
     ohlcExtrapolate(ohlc);
   });
   emitter.on('limitPredict', (limit) => {
+    trajectory = limit.trajectory;
     // console.log(limit);
     priceConditioning(limit);
   });

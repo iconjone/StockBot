@@ -206,5 +206,15 @@ ws.onmessage = function onMessage(evt) {
       width: 600, height: 400, color: '#161f27', paper_bgcolor: '#161f27', plot_bgcolor: '#161f27', font: { color: '#dbdbdb' },
     };
     Plotly.react(spread, spreadData, layout);
+  } else if (data.react !== undefined) {
+    // populate html table from data
+    data.react.forEach((row) => {
+      const rowInterval = row.interval;
+      document.getElementById(`motion-${rowInterval}`).innerHTML = `${row.motion}`;
+      document.getElementById(`immediate-motion-${rowInterval}`).innerHTML = `${row.immediateMotion}`;
+      document.getElementById(`average-difference-${rowInterval}`).innerHTML = `${row.averageDifference}`;
+      document.getElementById(`last-difference-${rowInterval}`).innerHTML = `${row.lastDifference}`;
+      document.getElementById(`percentage-difference-${rowInterval}`).innerHTML = `${row.percentageDiff}`;
+    });
   }
 };
