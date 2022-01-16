@@ -4,6 +4,7 @@ const express = require('express');
 const chalk = require('chalk');
 const moment = require('moment');
 const fs = require('fs');
+// const mdns = require('mdns');
 
 const krakenData = require('./krakenData');
 const websocketServer = require('./websocketServer');
@@ -105,6 +106,7 @@ function startWebServer() {
 // setting middleware
   const app = express();
   app.use(express.static('./web')); // Serves resources from web folder
+  // use mdns to name the server crypto
 
   app.listen(80); // const server = app.listen(5000);
   app.listen(443);

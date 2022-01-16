@@ -162,7 +162,13 @@ async function predictAO(interval) {
     child.on('message', (message) => {
       if (message.MLAO) {
         console.log('Received MLAO for interval:', message.MLAO.interval);
-        AOs[`ohlc-${message.MLAO.interval}-predict`] = message.MLAO.AO;
+        // clean up message.MLAO.AO and format it to the correct levels
+        const predictedAO = [AOs[`ohlc-${interval}`][0]];
+        for (let i = 1; i < message.MLAO.AO.length; i += 1) {
+          predictedAO.push(message.MLAO.AO[i] - message.MLAO.AO[i - 1] + predictedAO[i - 1]);
+        }
+
+        AOs[`ohlc-${message.MLAO.interval}-predict`] = predictedAO;
         emitter.emit('predictAO', AOs);
         emitter.emit('limitPredict', predictLimit(mode));
 
