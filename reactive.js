@@ -144,6 +144,16 @@ function ohlcExtrapolate(data) {
   });
 }
 
+// // interpolate the data and see if reversals occur
+// lastData = lastData.map((item, index) => [index, item]);
+// const lastDataInterpolated = interpolator(lastData);
+// // iterate from 21 to 40
+// for (let i = 31; i < 50; i += 1) {
+//   // console.log(lastDataInterpolated(i));
+// }
+// if (lastDataInterpolated(45) > 0 && lastData[lastData.length - 1] < 0) {
+//   console.log('thinks it will reverse', interval);
+// }
 function AOreact(AO) {
   const intervalState = {};
   intervals.forEach((interval) => {
@@ -164,8 +174,8 @@ function AOreact(AO) {
     ) {
       console.log('sell', interval, Date.now());
     }
-    let lastData = AOdata.slice(-30);
-    // get average difference between the last 30 data points
+    const lastData = AOdata.slice(-20);
+    // get average difference between the last 20 data points
     const differences = [];
     for (let i = 0; i < lastData.length - 2; i += 1) {
       differences.push(Math.abs(lastData[i] - lastData[i + 1]));
@@ -182,9 +192,19 @@ function AOreact(AO) {
     } else {
       type.motion = 'continue';
     }
-    if (Math.abs(percentageDiff) > 0.2) { // Over 20% changes means not moderate
+    if (Math.abs(percentageDiff) > 0.15) { // Over 20% changes means not moderate
       if (averageDifference > Math.abs(lastDifference)) {
-        type.strength = 'weak';
+        if (Math.abs(percentageDiff) > 0.75) {
+          type.strength = 'weakest';
+        } else if (Math.abs(percentageDiff) > 0.3) {
+          type.strength = 'weaker';
+        } else {
+          type.strength = 'weak';
+        }
+      } else if (Math.abs(percentageDiff) > 0.75) {
+        type.strength = 'strongest';
+      } else if (Math.abs(percentageDiff) > 0.3) {
+        type.strength = 'stronger';
       } else {
         type.strength = 'strong';
       }
@@ -200,17 +220,6 @@ function AOreact(AO) {
       motion,
       type,
     };
-
-    // interpolate the data and see if reversals occur
-    lastData = lastData.map((item, index) => [index, item]);
-    const lastDataInterpolated = interpolator(lastData);
-    // iterate from 21 to 40
-    for (let i = 31; i < 50; i += 1) {
-      // console.log(lastDataInterpolated(i));
-    }
-    if (lastDataInterpolated(45) > 0 && lastData[lastData.length - 1] < 0) {
-      console.log('thinks it will reverse', interval);
-    }
   });
   const reactData = intervals.map((interval) => ({
     interval,
@@ -225,6 +234,7 @@ function AOreact(AO) {
   }));
   emitter.emit('react', reactData);
   console.log(reactData);
+  // depending on the type of reaction determine if safe to buy or sell
 }
 
 function startReactive() {
