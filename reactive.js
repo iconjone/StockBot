@@ -44,12 +44,14 @@ let peaksAndValleys = {
 
 const priceLimits = [];
 
+const chainData = [];
+
 function passMode(pass) {
   mode = pass;
 }
 
 function sendDiscordMessage(username, message) {
-  if (false) {
+  if (true) {
     fetch(
       'https://discord.com/api/webhooks/929162198012538941/1_iTlZpngELQq9721fXZfLaM9ZKmpdSASYvLduAXJOon0AK85ArWo31WYYwfHWeWyrC9',
       {
@@ -58,7 +60,7 @@ function sendDiscordMessage(username, message) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-        // the username to be displayed
+          // the username to be displayed
           username,
           // contents of the message to be sent
           content: message,
@@ -118,9 +120,15 @@ function priceConditioning(limit) {
   }
   console.log(newLimit.limitPrice);
   // if new limit price is close to the last price by .01% send a message
-  if (!orderFlag && Math.abs(newLimit.limitPrice - lastPrice) / lastPrice < 0.001) {
+  if (
+    !orderFlag
+    && Math.abs(newLimit.limitPrice - lastPrice) / lastPrice < 0.001
+  ) {
     orderFlag = true;
-    sendDiscordMessage('Order fill Simulation', `Order: ${mode} at ${newLimit.limitPrice}`);
+    sendDiscordMessage(
+      'Order fill Simulation',
+      `Order: ${mode} at ${newLimit.limitPrice}`,
+    );
   }
   if (limit.OHLCpredictedLimit !== undefined) {
     limitDiscordMessage(
@@ -183,7 +191,7 @@ function AOreact(AO) {
     const averageDifference = differences.reduce((a, b) => a + b, 0) / differences.length;
     const lastDifference = lastData[lastData.length - 1] - lastData[lastData.length - 2];
     const percentageDiff = (Math.abs(lastDifference) - Math.abs(averageDifference))
-     / averageDifference;
+      / averageDifference;
     const immediateMotion = lastDifference > 0 ? 'bullish' : 'bearish';
     const { motion } = trajectory[interval];
     const type = {};
@@ -192,7 +200,8 @@ function AOreact(AO) {
     } else {
       type.motion = 'continue';
     }
-    if (Math.abs(percentageDiff) > 0.15) { // Over 20% changes means not moderate
+    if (Math.abs(percentageDiff) > 0.15) {
+      // Over 20% changes means not moderate
       if (averageDifference > Math.abs(lastDifference)) {
         if (Math.abs(percentageDiff) > 0.75) {
           type.strength = 'weakest';
@@ -230,11 +239,49 @@ function AOreact(AO) {
     immediateMotion: intervalState[interval].immediateMotion,
     type: intervalState[interval].type,
     averagePriceDifference: peaksAndValleys[interval].average,
-
   }));
   emitter.emit('react', reactData);
-  console.log(reactData);
+  // console.log(reactData);
   // depending on the type of reaction determine if safe to buy or sell
+
+  let chain = [{ beginning: 0, end: -1, motion: reactData[0].immediateMotion }];
+  // find borders of the react data in which it changes
+
+  for (let i = 1; i < reactData.length; i += 1) {
+    if (reactData[i].immediateMotion !== chain[chain.length - 1].motion) {
+      chain[chain.length - 1].end = i - 1;
+      chain.push({ beginning: i, end: i, motion: reactData[i].immediateMotion });
+    } else if (i === reactData.length - 1) {
+      chain[chain.length - 1].end = i;
+    }
+  }
+  const maxDifference = reactData[5].averagePriceDifference;
+  chain = chain.map((item) => {
+    const tempItem = item;
+    tempItem.description = `${item.motion} from ${intervals[item.beginning]} to ${intervals[item.end]}`;
+    // get max pricedifference in the chain
+    const maxDifferenceInChain = reactData
+      .slice(item.beginning, item.end + 1)
+      .reduce((a, b) => Math.max(a, b.averagePriceDifference), 0);
+
+    let sum = 0;
+    for (let x = item.beginning; x <= item.end; x += 1) {
+      sum += reactData[x].percentageDiff;
+    }
+    tempItem.averagePercentageDiff = sum / (item.end - item.beginning + 1);
+    return tempItem;
+  });
+  // push into chainData and ensure never gets longer than 750
+  chainData.push(chain);
+  if (chainData.length > 750) {
+    chainData.shift();
+  }
+  // console.log(chainData);
+  const numbers = [];
+  chainData.forEach((chain) => {
+    numbers.push(chain[chain.length - 1].averagePercentageDiff);
+  });
+  console.log(numbers);
 }
 
 function startReactive() {
