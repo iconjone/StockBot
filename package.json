@@ -7,9 +7,12 @@
     "test": "nodemon test.js",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "train": "nodemon trainModel.js",
-    "start": "pm2 start index.js --max-memory-restart 45M  -f",
+    "start": "pm2 start index.js --max-memory-restart 500M  -f",
     "stop": "pm2 delete all",
-    "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M --exp-backoff-restart-delay=100 -f"
+    "restart": "pm2 restart all",
+    "monit": "pm2 monit",
+    "start-dev": "cross-env NODE_ENV=development pm2 start index.js --max-memory-restart 45M --exp-backoff-restart-delay=100 -f",
+    "lint": "eslint . --fix"
   },
   "repository": {
     "type": "git",
@@ -24,19 +27,30 @@
   "dependencies": {
     "asciichart": "^1.5.25",
     "body-parser": "^1.19.0",
+    "brain.js": "^2.0.0-beta.4",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "http": "0.0.1-security",
     "image-charts": "^5.6.17",
+    "isomorphic-ws": "^4.0.1",
     "kraken-api": "^1.0.1",
+    "minmaxscaler": "^1.0.1",
+    "moment": "^2.29.1",
+    "natural-spline-interpolator": "^1.0.2",
     "node-fetch": "^2.6.1",
+    "nodeplotlib": "^0.7.6",
     "plotly": "^1.0.6",
     "pm2": "^4.5.1",
-    "ws": "^7.4.1"
+    "taira": "^3.2.1",
+    "technicalindicators": "^3.1.0",
+    "ws": "^7.5.6"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "eslint": "^8.4.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.3",
     "nodemon": "^2.0.6"
   }
 }
